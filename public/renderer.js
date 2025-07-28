@@ -3828,6 +3828,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.scannerEngine) {
             window.scannerEngine.updateSpeedDisplay();
         }
+        
+        // Показываем DEBUG кнопку только админам
+        showDebugButtonForAdmins();
     }, 1000);
     
     // Диагностика кнопок маркета
@@ -5011,9 +5014,73 @@ window.restoreUserPurchase = function() {
 
 // === ВИЗУАЛЬНАЯ ДИАГНОСТИКА ДЛЯ TELEGRAM MINI APP ===
 
+// Список админов (Telegram User ID)
+const ADMIN_IDS = [
+    '6499246016', // Ваш ID
+    // Добавляйте сюда ID других админов
+];
+
+// Проверка админских прав
+function checkAdminRights(userId) {
+    return ADMIN_IDS.includes(String(userId));
+}
+
+// Показать DEBUG кнопку только для админов
+function showDebugButtonForAdmins() {
+    const currentUserId = window.gamesManager ? window.gamesManager.getUserId() : null;
+    const debugBtn = document.getElementById('debug-btn');
+    
+    if (debugBtn && checkAdminRights(currentUserId)) {
+        debugBtn.style.display = 'inline-block';
+        console.log('🔑 Admin access granted - DEBUG button visible');
+    }
+}
+
 // Функция для запуска диагностики через интерфейс
 window.runDiagnostics = function() {
     console.log('🔧 Starting visual diagnostics...');
+    
+    // Проверка админских прав
+    const currentUserId = window.gamesManager ? window.gamesManager.getUserId() : null;
+    const isAdmin = checkAdminRights(currentUserId);
+    
+    // Простая проверка - добавляем в терминал
+    try {
+        const userId = window.gamesManager ? window.gamesManager.getUserId() : 'N/A';
+        const userBoosts = JSON.parse(localStorage.getItem('userBoosts') || '{}');
+        const userBoost = userBoosts[userId];
+        const activeBoost = localStorage.getItem('activeBoost');
+        
+        // Добавляем информацию в терминал
+        if (window.terminalManager) {
+            window.terminalManager.addLine('=== DIAGNOSTICS ===', 'SYSTEM');
+            window.terminalManager.addLine(`User ID: ${userId}`, 'INFO');
+            
+            if (userBoost) {
+                const timeLeft = Math.max(0, Math.floor((userBoost.endTime - Date.now()) / 1000 / 60));
+                window.terminalManager.addLine(`Purchase: ${userBoost.productName} (${userBoost.multiplier}x)`, 'SUCCESS');
+                window.terminalManager.addLine(`Status: ${timeLeft > 0 ? `Active ${timeLeft}m` : 'EXPIRED'}`, timeLeft > 0 ? 'SUCCESS' : 'ERROR');
+            } else {
+                window.terminalManager.addLine('No purchases found', 'ERROR');
+            }
+            
+            if (activeBoost) {
+                const boost = JSON.parse(activeBoost);
+                window.terminalManager.addLine(`Current boost: ${boost.multiplier}x`, 'SUCCESS');
+            } else {
+                window.terminalManager.addLine('No active boost', 'ERROR');
+            }
+            
+            // Если есть покупка, но нет активного буста - восстанавливаем
+            if (userBoost && userBoost.endTime > Date.now() && !activeBoost) {
+                localStorage.setItem('activeBoost', JSON.stringify(userBoost));
+                updateAllSpeedDisplays();
+                window.terminalManager.addLine('BOOST RESTORED!', 'SUCCESS');
+            }
+        }
+    } catch (e) {
+        console.error('Diagnostic error:', e);
+    }
     
     // Создаем диагностическое окно
     const diagnosticModal = document.createElement('div');
@@ -5125,39 +5192,93 @@ window.runDiagnostics = function() {
     addLine('🛠️ ACTIONS:', '#ffff00');
     addLine('');
     
-    diagnosticModal.innerHTML += `
+    // Добавляем кнопки в зависимости от прав доступа
+    const buttonsHtml = isAdmin ? `
         <div style="margin-top: 20px;">
+            <div style="color: #ff6b6b; margin-bottom: 10px; font-weight: bold;">🔑 ADMIN PANEL</div>
             <button onclick="forceRestorePurchase()" style="
                 background: #2ed573;
                 color: white;
                 border: none;
-                padding: 10px 15px;
-                margin: 5px;
+                padding: 8px 12px;
+                margin: 3px;
                 border-radius: 5px;
                 cursor: pointer;
-            ">🔄 RESTORE PURCHASE</button>
+                font-size: 11px;
+            ">🔄 RESTORE</button>
             
-            <button onclick="forceActivateTestBoost()" style="
+            <button onclick="compensateUser()" style="
+                background: #00d2d3;
+                color: white;
+                border: none;
+                padding: 8px 12px;
+                margin: 3px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 11px;
+            ">💰 COMPENSATE</button>
+            
+            <button onclick="giveUserBoost(null, '3x')" style="
                 background: #ffa502;
                 color: white;
                 border: none;
-                padding: 10px 15px;
-                margin: 5px;
+                padding: 8px 12px;
+                margin: 3px;
                 border-radius: 5px;
                 cursor: pointer;
-            ">🚀 ACTIVATE TEST BOOST</button>
+                font-size: 11px;
+            ">🚀 GIVE 3X</button>
+            
+            <button onclick="extendUserBoost(30)" style="
+                background: #5f27cd;
+                color: white;
+                border: none;
+                padding: 8px 12px;
+                margin: 3px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 11px;
+            ">⏰ +30MIN</button>
+            
+            <button onclick="debugUserPurchases()" style="
+                background: #ff9ff3;
+                color: black;
+                border: none;
+                padding: 8px 12px;
+                margin: 3px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 11px;
+            ">🔍 DEBUG</button>
             
             <button onclick="clearAllData()" style="
                 background: #ff4757;
                 color: white;
                 border: none;
-                padding: 10px 15px;
-                margin: 5px;
+                padding: 8px 12px;
+                margin: 3px;
                 border-radius: 5px;
                 cursor: pointer;
-            ">🗑️ CLEAR ALL DATA</button>
+                font-size: 11px;
+            ">🗑️ CLEAR</button>
+        </div>
+    ` : `
+        <div style="margin-top: 20px;">
+            <div style="color: #ffa502; margin-bottom: 10px;">👤 USER PANEL</div>
+            <button onclick="forceRestorePurchase()" style="
+                background: #2ed573;
+                color: white;
+                border: none;
+                padding: 8px 12px;
+                margin: 3px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 11px;
+            ">🔄 RESTORE PURCHASE</button>
         </div>
     `;
+    
+    diagnosticModal.innerHTML += buttonsHtml;
     
     document.body.appendChild(diagnosticModal);
 };
@@ -5217,4 +5338,180 @@ window.clearAllData = function() {
         alert('🗑️ All data cleared');
         closeDiagnostics();
     }
+};
+
+// === АДМИН-ПАНЕЛЬ ДЛЯ РУЧНОГО УПРАВЛЕНИЯ ПОКУПКАМИ ===
+
+// Ручная выдача буста пользователю
+window.giveUserBoost = function(userId = null, boostType = '3x') {
+    const currentUserId = window.gamesManager.getUserId();
+    if (!checkAdminRights(currentUserId)) {
+        alert('❌ Access denied: Admin rights required');
+        return null;
+    }
+    
+    const targetUserId = userId || currentUserId;
+    
+    let boostConfig;
+    switch(boostType) {
+        case '10x':
+            boostConfig = {
+                multiplier: 10,
+                scanSpeed: 100, // 10 кошельков/сек
+                findRate: 25,   // 25%
+                duration: 10 * 60 * 1000, // 10 минут
+                productName: 'Manual 10x Boost'
+            };
+            break;
+        case '20x':
+            boostConfig = {
+                multiplier: 20,
+                scanSpeed: 50,  // 20 кошельков/сек
+                findRate: 35,   // 35%
+                duration: 10 * 60 * 1000, // 10 минут
+                productName: 'Manual 20x Boost'
+            };
+            break;
+        case '50x':
+            boostConfig = {
+                multiplier: 50,
+                scanSpeed: 20,  // 50 кошельков/сек
+                findRate: 45,   // 45%
+                duration: 10 * 60 * 1000, // 10 минут
+                productName: 'Manual 50x Boost'
+            };
+            break;
+        case '100x':
+            boostConfig = {
+                multiplier: 100,
+                scanSpeed: 10,  // 100 кошельков/сек
+                findRate: 55,   // 55%
+                duration: 10 * 60 * 1000, // 10 минут
+                productName: 'Manual 100x Boost'
+            };
+            break;
+        default: // 3x
+            boostConfig = {
+                multiplier: 3,
+                scanSpeed: 333, // 3 кошелька/сек
+                findRate: 15,   // 15%
+                duration: 15 * 60 * 1000, // 15 минут
+                productName: 'Manual 3x Boost (USDT Compensation)'
+            };
+    }
+    
+    const boostData = {
+        ...boostConfig,
+        endTime: Date.now() + boostConfig.duration,
+        symbol: boostType,
+        userId: targetUserId,
+        purchaseTime: Date.now(),
+        manualGrant: true, // Отметка что выдано вручную
+        grantReason: 'Payment confirmed manually'
+    };
+    
+    // Сохраняем в обеих системах
+    window.gamesManager.setUserBoost(targetUserId, boostData);
+    localStorage.setItem('activeBoost', JSON.stringify(boostData));
+    
+    // Обновляем дисплеи
+    updateAllSpeedDisplays();
+    if (window.scannerEngine) {
+        window.scannerEngine.updateSpeedDisplay();
+        window.scannerEngine.updateScanningSpeed();
+    }
+    
+    console.log(`✅ Manual boost granted: ${boostType} to user ${targetUserId}`);
+    return boostData;
+};
+
+// Продление времени буста
+window.extendUserBoost = function(minutes = 15) {
+    const userId = window.gamesManager.getUserId();
+    const userBoost = window.gamesManager.getUserBoost(userId);
+    
+    if (userBoost) {
+        // Продляем время
+        userBoost.endTime += minutes * 60 * 1000;
+        
+        // Сохраняем
+        window.gamesManager.setUserBoost(userId, userBoost);
+        localStorage.setItem('activeBoost', JSON.stringify(userBoost));
+        
+        console.log(`✅ Boost extended by ${minutes} minutes for user ${userId}`);
+        alert(`✅ Boost extended by ${minutes} minutes!`);
+        
+        return userBoost;
+    } else {
+        alert('❌ No active boost to extend');
+        return null;
+    }
+};
+
+// Компенсация за проблемы с платежом
+window.compensateUser = function(userId = null, reason = 'Payment issue compensation') {
+    const currentUserId = window.gamesManager.getUserId();
+    if (!checkAdminRights(currentUserId)) {
+        alert('❌ Access denied: Admin rights required');
+        return null;
+    }
+    
+    const targetUserId = userId || currentUserId;
+    
+    const compensationBoost = {
+        multiplier: 3,
+        scanSpeed: 333,
+        findRate: 15,
+        endTime: Date.now() + (30 * 60 * 1000), // 30 минут компенсации
+        symbol: '3x',
+        productName: 'Compensation Boost',
+        userId: targetUserId,
+        purchaseTime: Date.now(),
+        compensation: true,
+        reason: reason
+    };
+    
+    window.gamesManager.setUserBoost(targetUserId, compensationBoost);
+    localStorage.setItem('activeBoost', JSON.stringify(compensationBoost));
+    updateAllSpeedDisplays();
+    
+    console.log(`✅ Compensation granted: 3x/30min to user ${targetUserId}`);
+    console.log(`📝 Reason: ${reason}`);
+    
+    alert(`✅ Compensation granted: 3x speed for 30 minutes\nReason: ${reason}`);
+    return compensationBoost;
+};
+
+// Проверка всех покупок пользователя (включая скрытые)
+window.debugUserPurchases = function(userId = null) {
+    const targetUserId = userId || window.gamesManager.getUserId();
+    
+    console.log(`🔍 === DEBUG PURCHASES FOR USER ${targetUserId} ===`);
+    
+    // Проверяем localStorage
+    const userBoosts = JSON.parse(localStorage.getItem('userBoosts') || '{}');
+    const userBoost = userBoosts[targetUserId];
+    const activeBoost = JSON.parse(localStorage.getItem('activeBoost') || 'null');
+    const marketHistory = JSON.parse(localStorage.getItem('marketHistory') || '[]');
+    
+    console.log('📦 userBoosts entry:', userBoost);
+    console.log('🚀 activeBoost:', activeBoost);
+    console.log('🛒 marketHistory:', marketHistory);
+    
+    // Проверяем Telegram Cloud
+    if (tg.CloudStorage) {
+        tg.CloudStorage.getItem(`boost_${targetUserId}`, (err, data) => {
+            if (!err && data) {
+                console.log('☁️ Telegram Cloud boost:', JSON.parse(data));
+            } else {
+                console.log('☁️ No data in Telegram Cloud');
+            }
+        });
+    }
+    
+    return {
+        userBoost,
+        activeBoost,
+        marketHistory: marketHistory.filter(item => item.timestamp > Date.now() - 24*60*60*1000) // последние 24 часа
+    };
 };
