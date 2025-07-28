@@ -120,6 +120,17 @@
         <section class="scanner-terminal">
             <div class="terminal-header">
                 <span class="terminal-prompt">&gt; NEURAL.SCAN.STATUS</span>
+                <!-- Добавляем диагностическую кнопку -->
+                <button id="debug-btn" onclick="runDiagnostics()" style="
+                    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+                    color: white;
+                    border: none;
+                    padding: 8px 12px;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    cursor: pointer;
+                    margin-left: 10px;
+                ">🔧 DEBUG</button>
             </div>
             <div class="terminal-window">
                 <div class="terminal-content" id="terminal-output">
