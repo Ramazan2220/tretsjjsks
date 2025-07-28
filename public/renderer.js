@@ -148,20 +148,8 @@ if (tg) {
     tg.setHeaderColor('#0B0E1A');
     tg.setBackgroundColor('#0B0E1A');
     
-    // Configure main button
-    tg.MainButton.setText('🔍 Start Scanning');
-    tg.MainButton.color = '#2196F3';
-    tg.MainButton.textColor = '#FFFFFF';
-    tg.MainButton.show();
-    
-    // Main button click handler
-    tg.MainButton.onClick(() => {
-        if (!appState.isScanning) {
-            startScanning();
-        } else {
-            stopScanning();
-        }
-    });
+    // Hide main button since we have our own UI
+    tg.MainButton.hide();
 }
 
 // Application Configuration
@@ -3468,10 +3456,7 @@ class ScannerEngine {
         // Update metrics display
         metricsManager.updateMetricsDisplay();
         
-        // Update Telegram main button
-        if (tg?.MainButton) {
-            tg.MainButton.setText('⏹️ Stop Scanning');
-        }
+        // MainButton removed - using custom UI only
     }
 
     stop() {
@@ -3492,10 +3477,7 @@ class ScannerEngine {
         // Update metrics display
         metricsManager.updateMetricsDisplay();
         
-        // Update Telegram main button
-        if (tg?.MainButton) {
-            tg.MainButton.setText('🔍 Start Scanning');
-        }
+        // MainButton removed - using custom UI only
     }
 
     performScan() {
@@ -3659,9 +3641,66 @@ let scannerEngine;
 window.startScanning = () => scannerEngine?.start();
 window.stopScanning = () => scannerEngine?.stop();
 
+// Function to load user data from Telegram
+function loadUserData() {
+    console.log('👤 Loading user data...');
+    
+    try {
+        const tg = window.Telegram?.WebApp;
+        const user = tg?.initDataUnsafe?.user;
+        
+        if (user) {
+            console.log('✅ Telegram user found:', user);
+            
+            // Update all username displays
+            const usernameElements = [
+                document.getElementById('user-username'),
+                document.getElementById('profile-user-username'),
+                document.getElementById('profile-telegram-id')
+            ];
+            
+            const nameElements = [
+                document.getElementById('user-name'),
+                document.getElementById('profile-user-name')
+            ];
+            
+            const username = user.username ? `@${user.username}` : `User${user.id}`;
+            const displayName = user.first_name || user.username || 'Eagle User';
+            
+            usernameElements.forEach(el => {
+                if (el) el.textContent = username;
+            });
+            
+            nameElements.forEach(el => {
+                if (el) el.textContent = displayName;
+            });
+            
+            console.log(`👤 User loaded: ${displayName} (${username})`);
+        } else {
+            console.log('⚠️ No Telegram user data, using defaults');
+            
+            // Fallback for non-Telegram environment
+            const usernameElements = [
+                document.getElementById('user-username'),
+                document.getElementById('profile-user-username'),
+                document.getElementById('profile-telegram-id')
+            ];
+            
+            usernameElements.forEach(el => {
+                if (el) el.textContent = '@guest';
+            });
+        }
+    } catch (error) {
+        console.error('❌ Error loading user data:', error);
+    }
+}
+
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Eagle Scanner initialized');
+    
+    // Load user data first
+    loadUserData();
     
     // Initialize all managers after DOM is ready
     navigationManager = new NavigationManager();
