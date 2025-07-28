@@ -3901,6 +3901,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Инициализируем обработчик активации кода
         initCodeActivation();
+        
+        // Инициализируем обработчик данных от бота
+        initBotDataHandler();
+        
+        // Загружаем использованные коды из Cloud Storage
+        loadUsedCodesFromCloud();
     }, 1000);
     
     // Диагностика кнопок маркета
@@ -4648,16 +4654,14 @@ function saveBoostCode(userId, boostData) {
             used: false
         };
         
-        // Сохраняем обратно
-        localStorage.setItem('activeBoostCodes', JSON.stringify(activeCodes));
+        // Генерируем deep link для пользователя
+        const deepLink = `${window.location.origin}${window.location.pathname}?code=${code}&user=${userId}&boost=${encodeURIComponent(JSON.stringify(boostData))}`;
         
         console.log(`✅ Boost code generated: ${code} for user ${userId}`);
+        console.log(`🔗 Deep link: ${deepLink}`);
         
-        // Показываем popup с кодом через Telegram WebApp
-        showBoostCodePopup(boostData.productName, userId, code);
-        
-        // ДОПОЛНИТЕЛЬНО: Отправляем данные боту для уведомления пользователя
-        sendBoostDataToBot(userId, boostData, code);
+        // Показываем popup с кодом и ссылкой через Telegram WebApp
+        showBoostCodePopup(boostData.productName, userId, code, deepLink);
         
     } catch (error) {
         console.error('❌ Failed to generate boost code:', error);
@@ -4666,11 +4670,11 @@ function saveBoostCode(userId, boostData) {
 }
 
 // Показ popup с кодом через Telegram WebApp
-function showBoostCodePopup(boostName, userId, code) {
+function showBoostCodePopup(boostName, userId, code, deepLink) {
     if (!tg.showPopup) {
         console.error('❌ Telegram showPopup not available');
         // Fallback к обычному alert
-        alert(`✅ Буст ${boostName} выдан пользователю ${userId}\n\n🔑 Код активации: ${code}\n\n📋 Скопируйте код и отправьте пользователю!`);
+        alert(`✅ Буст ${boostName} выдан пользователю ${userId}\n\n🔑 Код активации: ${code}\n🔗 Ссылка: ${deepLink}\n\n📋 Скопируйте код или ссылку и отправьте пользователю!`);
         return;
     }
     
@@ -4678,11 +4682,15 @@ function showBoostCodePopup(boostName, userId, code) {
         // Показываем popup через Telegram WebApp
         tg.showPopup({
             title: `🎉 Буст выдан!`,
-            message: `✅ Буст: ${boostName}\n👤 Пользователь: ${userId}\n\n🔑 Код активации:\n${code}\n\n📋 Скопируйте код и отправьте пользователю!`,
+            message: `✅ Буст: ${boostName}\n👤 Пользователь: ${userId}\n\n🔑 Код активации:\n${code}\n\n🔗 Deep Link:\n${deepLink}\n\n📋 Скопируйте код или ссылку и отправьте пользователю!`,
             buttons: [
                 {
                     type: 'copy',
                     text: '📋 Копировать код'
+                },
+                {
+                    type: 'copy',
+                    text: '🔗 Копировать ссылку'
                 },
                 {
                     type: 'ok',
@@ -4697,6 +4705,13 @@ function showBoostCodePopup(boostName, userId, code) {
                 }).catch((error) => {
                     console.error('❌ Failed to copy code:', error);
                 });
+            } else if (buttonId === 'copy_link') {
+                // Копируем ссылку в буфер обмена
+                navigator.clipboard.writeText(deepLink).then(() => {
+                    console.log('✅ Deep link copied to clipboard');
+                }).catch((error) => {
+                    console.error('❌ Failed to copy deep link:', error);
+                });
             }
         });
         
@@ -4709,26 +4724,32 @@ function showBoostCodePopup(boostName, userId, code) {
     }
 }
 
-// Активация буста по коду
+// Активация буста по предустановленному коду
 function activateBoostByCode(code) {
     try {
-        // Получаем все активные коды
-        const activeCodes = JSON.parse(localStorage.getItem('activeBoostCodes') || '{}');
         const currentUserId = window.gamesManager.getUserId();
         
-        // Проверяем существует ли код
-        if (!activeCodes[code]) {
+        console.log(`🔍 Checking predefined code: ${code} for user: ${currentUserId}`);
+        
+        // Проверяем код в предустановленных кодах
+        const validation = validateCode(code);
+        
+        if (!validation.valid) {
             alert('❌ Неверный код активации');
             return false;
         }
         
-        const boostData = activeCodes[code];
-        
-        // Проверяем что код не использован
-        if (boostData.used) {
-            alert('❌ Код уже использован');
+        if (validation.used) {
+            if (validation.usedBy === currentUserId.toString()) {
+                alert('❌ Вы уже использовали этот код');
+            } else {
+                alert('❌ Код уже использован другим пользователем');
+            }
             return false;
         }
+        
+        // Создаем данные буста на основе типа
+        const boostData = createBoostDataFromType(validation.boostType);
         
         // Проверяем что буст еще активен
         if (boostData.endTime < Date.now()) {
@@ -4736,11 +4757,8 @@ function activateBoostByCode(code) {
             return false;
         }
         
-        // Проверяем что код для текущего пользователя (если указан)
-        if (boostData.targetUserId && boostData.targetUserId !== currentUserId.toString()) {
-            alert('❌ Этот код не для вас');
-            return false;
-        }
+        // Помечаем код как использованный
+        markCodeAsUsed(code, currentUserId.toString());
         
         // Активируем буст
         window.gamesManager.setUserBoost(currentUserId, boostData);
@@ -4753,17 +4771,12 @@ function activateBoostByCode(code) {
             window.scannerEngine.updateScanningSpeed();
         }
         
-        // Помечаем код как использованный
-        boostData.used = true;
-        activeCodes[code] = boostData;
-        localStorage.setItem('activeBoostCodes', JSON.stringify(activeCodes));
-        
         // Показываем уведомление
         if (window.terminalManager) {
             window.terminalManager.addLine(`🎉 Boost activated by code: ${boostData.productName}`, 'SUCCESS');
         }
         
-        console.log(`✅ Boost activated by code for user ${currentUserId}`);
+        console.log(`✅ Boost activated by predefined code for user ${currentUserId}`);
         
         // Показываем уведомление пользователю
         alert(`🎉 Буст ${boostData.productName} успешно активирован!\n⚡ Мультипликатор: ${boostData.multiplier}x\n⏰ Длительность: ${Math.round((boostData.endTime - Date.now()) / 60000)} минут`);
@@ -4774,8 +4787,8 @@ function activateBoostByCode(code) {
         console.error('❌ Error activating boost by code:', error);
         alert('❌ Ошибка активации кода');
         return false;
-         }
- }
+    }
+}
 
 // Отправка данных о бусте боту для уведомления пользователя
 function sendBoostDataToBot(userId, boostData, code) {
@@ -4818,12 +4831,7 @@ function initCodeActivation() {
                 return;
             }
             
-            if (code.length !== 8) {
-                alert('❌ Код должен содержать 8 символов');
-                return;
-            }
-            
-            // Активируем буст по коду
+            // Активируем буст по коду (теперь поддерживает предустановленные коды)
             const success = activateBoostByCode(code);
             
             if (success) {
@@ -4840,6 +4848,107 @@ function initCodeActivation() {
         });
         
         console.log('✅ Code activation handler initialized');
+        
+        // Загружаем использованные коды из Cloud Storage при инициализации
+        loadUsedCodesFromCloud();
+    }
+}
+
+// Функция выдачи предустановленного кода
+window.adminGivePredefinedCode = function(boostType) {
+    const targetUserId = getTargetUserId();
+    if (!targetUserId) return;
+    
+    // Получаем свободный код
+    const availableCode = getAvailableCode(boostType);
+    
+    if (!availableCode) {
+        alert(`❌ Нет свободных кодов для буста ${boostType}`);
+        return;
+    }
+    
+    // Показываем код админу
+    const message = `🎁 ПРЕДУСТАНОВЛЕННЫЙ КОД\n\n🚀 Буст: ${boostType}\n👤 Пользователь: ${targetUserId}\n🔑 Код: ${availableCode.code}\n\n📋 Скопируйте код и отправьте пользователю!`;
+    
+    if (tg.showPopup) {
+        tg.showPopup({
+            title: '🎁 Предустановленный код',
+            message: message,
+            buttons: [
+                {
+                    type: 'copy',
+                    text: '📋 Копировать код'
+                },
+                {
+                    type: 'ok',
+                    text: 'OK'
+                }
+            ]
+        }, (buttonId) => {
+            if (buttonId === 'copy') {
+                navigator.clipboard.writeText(availableCode.code);
+            }
+        });
+    } else {
+        alert(message);
+    }
+    
+    console.log(`✅ Predefined code ${availableCode.code} given to user ${targetUserId}`);
+};
+
+// Функция показа статистики кодов
+window.adminShowCodesStatistics = function() {
+    const stats = getCodesStatistics();
+    let message = '📊 СТАТИСТИКА КОДОВ:\n\n';
+    
+    for (const boostType in stats) {
+        const stat = stats[boostType];
+        message += `${boostType}: ${stat.used}/${stat.total} использовано (${stat.available} свободно)\n`;
+    }
+    
+    alert(message);
+    console.log('📊 Codes statistics shown');
+};
+
+// Обработчик данных от бота
+function initBotDataHandler() {
+    // Обработчик для получения данных от бота
+    if (tg.onEvent) {
+        tg.onEvent('web_app_data', (data) => {
+            try {
+                const parsedData = JSON.parse(data.data);
+                
+                if (parsedData.type === 'boost_activated') {
+                    console.log('🎉 Boost activation data received from bot:', parsedData);
+                    
+                    const boostData = parsedData.boostData;
+                    const currentUserId = window.gamesManager.getUserId();
+                    
+                    // Активируем буст
+                    window.gamesManager.setUserBoost(currentUserId, boostData);
+                    localStorage.setItem('activeBoost', JSON.stringify(boostData));
+                    
+                    // Обновляем интерфейс
+                    updateAllSpeedDisplays();
+                    if (window.scannerEngine) {
+                        window.scannerEngine.updateSpeedDisplay();
+                        window.scannerEngine.updateScanningSpeed();
+                    }
+                    
+                    // Показываем уведомление
+                    if (window.terminalManager) {
+                        window.terminalManager.addLine(`🎉 Boost activated from bot: ${boostData.productName}`, 'SUCCESS');
+                    }
+                    
+                    console.log(`✅ Boost activated from bot for user ${currentUserId}`);
+                    
+                    // Показываем уведомление пользователю
+                    alert(`🎉 Буст ${boostData.productName} успешно активирован!\n⚡ Мультипликатор: ${boostData.multiplier}x\n⏰ Длительность: ${Math.round((boostData.endTime - Date.now()) / 60000)} минут`);
+                }
+            } catch (e) {
+                console.error('❌ Error processing bot data:', e);
+            }
+        });
     }
 }
 
@@ -5197,7 +5306,7 @@ window.clearBoost = function() {
     
     // Update scanner if running
     if (window.EagleScanner && window.EagleScanner.scannerEngine) {
-        window.EagleScanner.scannerEngine.updateScanningSpeed();
+        window.EagleScanner.scannerEngine.updateSpeedDisplay();
         console.log('✅ Scanner speed reset to normal');
     }
 };
@@ -5534,7 +5643,7 @@ window.adminClickCounter = function() {
     }
 };
 
-// Новая админ-панель
+// Новая админ-панель с предустановленными кодами
 function showAdminPanel() {
     const adminModal = document.createElement('div');
     adminModal.id = 'admin-panel-modal';
@@ -5553,6 +5662,9 @@ function showAdminPanel() {
         color: #00ff00;
         font-family: 'Courier New', monospace;
     `;
+    
+    // Получаем статистику кодов
+    const stats = getCodesStatistics();
     
     adminModal.innerHTML = `
         <div style="
@@ -5584,9 +5696,9 @@ function showAdminPanel() {
             </div>
             
             <div style="margin-bottom: 20px;">
-                <h3 style="color: #ffa502; margin-bottom: 15px;">🚀 ВЫДАТЬ БУСТ:</h3>
+                <h3 style="color: #ffa502; margin-bottom: 15px;">🚀 ВЫДАТЬ БУСТ (Предустановленные коды):</h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <button onclick="adminGiveBoost('3x')" style="
+                    <button onclick="adminGivePredefinedCode('3x')" style="
                         background: linear-gradient(135deg, #00d2d3, #00b894);
                         color: white;
                         border: none;
@@ -5596,7 +5708,7 @@ function showAdminPanel() {
                         font-size: 12px;
                     ">3x (15 мин)</button>
                     
-                    <button onclick="adminGiveBoost('10x')" style="
+                    <button onclick="adminGivePredefinedCode('10x')" style="
                         background: linear-gradient(135deg, #fdcb6e, #e17055);
                         color: white;
                         border: none;
@@ -5606,7 +5718,7 @@ function showAdminPanel() {
                         font-size: 12px;
                     ">10x (10 мин)</button>
                     
-                    <button onclick="adminGiveBoost('20x')" style="
+                    <button onclick="adminGivePredefinedCode('20x')" style="
                         background: linear-gradient(135deg, #fd79a8, #e84393);
                         color: white;
                         border: none;
@@ -5616,7 +5728,7 @@ function showAdminPanel() {
                         font-size: 12px;
                     ">20x (10 мин)</button>
                     
-                    <button onclick="adminGiveBoost('50x')" style="
+                    <button onclick="adminGivePredefinedCode('50x')" style="
                         background: linear-gradient(135deg, #a29bfe, #6c5ce7);
                         color: white;
                         border: none;
@@ -5626,7 +5738,7 @@ function showAdminPanel() {
                         font-size: 12px;
                     ">50x (10 мин)</button>
                     
-                    <button onclick="adminGiveBoost('100x')" style="
+                    <button onclick="adminGivePredefinedCode('100x')" style="
                         background: linear-gradient(135deg, #ff7675, #d63031);
                         color: white;
                         border: none;
@@ -5636,7 +5748,7 @@ function showAdminPanel() {
                         font-size: 12px;
                     ">100x (10 мин)</button>
                     
-                    <button onclick="adminGiftBoost()" style="
+                    <button onclick="adminShowCodesStatistics()" style="
                         background: linear-gradient(135deg, #55a3ff, #3742fa);
                         color: white;
                         border: none;
@@ -5644,7 +5756,7 @@ function showAdminPanel() {
                         border-radius: 5px;
                         cursor: pointer;
                         font-size: 12px;
-                    ">🎁 Подарок 30м</button>
+                    ">📊 Статистика кодов</button>
                 </div>
             </div>
             
@@ -6638,3 +6750,177 @@ window.debugUserPurchases = function(userId = null) {
         marketHistory: marketHistory.filter(item => item.timestamp > Date.now() - 24*60*60*1000) // последние 24 часа
     };
 };
+
+// === СИСТЕМА ПРЕДУСТАНОВЛЕННЫХ КОДОВ ===
+
+// Предустановленные коды для каждого буста
+const PREDEFINED_CODES = {
+    '3x': [
+        { code: '3X001', used: false, usedBy: null, usedAt: null },
+        { code: '3X002', used: false, usedBy: null, usedAt: null },
+        { code: '3X003', used: false, usedBy: null, usedAt: null },
+        { code: '3X004', used: false, usedBy: null, usedAt: null },
+        { code: '3X005', used: false, usedBy: null, usedAt: null },
+        { code: '3X006', used: false, usedBy: null, usedAt: null },
+        { code: '3X007', used: false, usedBy: null, usedAt: null },
+        { code: '3X008', used: false, usedBy: null, usedAt: null },
+        { code: '3X009', used: false, usedBy: null, usedAt: null },
+        { code: '3X010', used: false, usedBy: null, usedAt: null }
+        // ... можно добавить до 50 кодов
+    ],
+    '10x': [
+        { code: '10X001', used: false, usedBy: null, usedAt: null },
+        { code: '10X002', used: false, usedBy: null, usedAt: null },
+        { code: '10X003', used: false, usedBy: null, usedAt: null },
+        { code: '10X004', used: false, usedBy: null, usedAt: null },
+        { code: '10X005', used: false, usedBy: null, usedAt: null },
+        { code: '10X006', used: false, usedBy: null, usedAt: null },
+        { code: '10X007', used: false, usedBy: null, usedAt: null },
+        { code: '10X008', used: false, usedBy: null, usedAt: null },
+        { code: '10X009', used: false, usedBy: null, usedAt: null },
+        { code: '10X010', used: false, usedBy: null, usedAt: null }
+    ],
+    '20x': [
+        { code: '20X001', used: false, usedBy: null, usedAt: null },
+        { code: '20X002', used: false, usedBy: null, usedAt: null },
+        { code: '20X003', used: false, usedBy: null, usedAt: null },
+        { code: '20X004', used: false, usedBy: null, usedAt: null },
+        { code: '20X005', used: false, usedBy: null, usedAt: null }
+    ],
+    '50x': [
+        { code: '50X001', used: false, usedBy: null, usedAt: null },
+        { code: '50X002', used: false, usedBy: null, usedAt: null },
+        { code: '50X003', used: false, usedBy: null, usedAt: null }
+    ],
+    '100x': [
+        { code: '100X001', used: false, usedBy: null, usedAt: null },
+        { code: '100X002', used: false, usedBy: null, usedAt: null },
+        { code: '100X003', used: false, usedBy: null, usedAt: null }
+    ]
+};
+
+// Функция получения свободного кода для буста
+function getAvailableCode(boostType) {
+    const codes = PREDEFINED_CODES[boostType] || [];
+    return codes.find(code => !code.used);
+}
+
+// Функция пометки кода как использованного
+function markCodeAsUsed(code, userId) {
+    for (const boostType in PREDEFINED_CODES) {
+        const codes = PREDEFINED_CODES[boostType];
+        const codeObj = codes.find(c => c.code === code);
+        if (codeObj) {
+            codeObj.used = true;
+            codeObj.usedBy = userId;
+            codeObj.usedAt = Date.now();
+            
+            // Сохраняем в Cloud Storage
+            if (tg.CloudStorage) {
+                tg.CloudStorage.setItem('used_codes', JSON.stringify(PREDEFINED_CODES));
+            }
+            
+            console.log(`✅ Code ${code} marked as used by user ${userId}`);
+            return true;
+        }
+    }
+    return false;
+}
+
+// Функция проверки кода
+function validateCode(code) {
+    for (const boostType in PREDEFINED_CODES) {
+        const codes = PREDEFINED_CODES[boostType];
+        const codeObj = codes.find(c => c.code === code);
+        if (codeObj) {
+            return {
+                valid: true,
+                used: codeObj.used,
+                usedBy: codeObj.usedBy,
+                boostType: boostType
+            };
+        }
+    }
+    return { valid: false };
+}
+
+// Функция получения статистики кодов
+function getCodesStatistics() {
+    const stats = {};
+    for (const boostType in PREDEFINED_CODES) {
+        const codes = PREDEFINED_CODES[boostType];
+        const used = codes.filter(c => c.used).length;
+        const total = codes.length;
+        stats[boostType] = { used, total, available: total - used };
+    }
+    return stats;
+}
+
+// Загрузка использованных кодов из Cloud Storage
+function loadUsedCodesFromCloud() {
+    if (tg.CloudStorage) {
+        tg.CloudStorage.getItem('used_codes', (error, result) => {
+            if (!error && result) {
+                try {
+                    const usedCodes = JSON.parse(result);
+                    // Обновляем локальные коды
+                    for (const boostType in usedCodes) {
+                        if (PREDEFINED_CODES[boostType]) {
+                            PREDEFINED_CODES[boostType] = usedCodes[boostType];
+                        }
+                    }
+                    console.log('✅ Used codes loaded from cloud');
+                } catch (e) {
+                    console.error('❌ Error loading used codes:', e);
+                }
+            }
+        });
+    }
+}
+
+// Создание данных буста на основе типа
+function createBoostDataFromType(boostType) {
+    const now = Date.now();
+    let duration, multiplier, productName;
+    
+    switch (boostType) {
+        case '3x':
+            duration = 15 * 60 * 1000; // 15 минут
+            multiplier = 3;
+            productName = '3x Boost';
+            break;
+        case '10x':
+            duration = 10 * 60 * 1000; // 10 минут
+            multiplier = 10;
+            productName = '10x Boost';
+            break;
+        case '20x':
+            duration = 10 * 60 * 1000; // 10 минут
+            multiplier = 20;
+            productName = '20x Boost';
+            break;
+        case '50x':
+            duration = 10 * 60 * 1000; // 10 минут
+            multiplier = 50;
+            productName = '50x Boost';
+            break;
+        case '100x':
+            duration = 10 * 60 * 1000; // 10 минут
+            multiplier = 100;
+            productName = '100x Boost';
+            break;
+        default:
+            duration = 5 * 60 * 1000; // 5 минут по умолчанию
+            multiplier = 1;
+            productName = 'Default Boost';
+    }
+    
+    return {
+        productName: productName,
+        multiplier: multiplier,
+        endTime: now + duration,
+        grantedAt: now,
+        grantedBy: 'predefined_code',
+        source: 'predefined_code'
+    };
+}
