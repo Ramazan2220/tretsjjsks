@@ -3829,8 +3829,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.scannerEngine.updateSpeedDisplay();
         }
         
-        // Показываем DEBUG кнопку только админам
-        showDebugButtonForAdmins();
+        // Админ-панель доступна через секретный вход (5 кликов по заголовку)
     }, 1000);
     
     // Диагностика кнопок маркета
@@ -5025,18 +5024,327 @@ function checkAdminRights(userId) {
     return ADMIN_IDS.includes(String(userId));
 }
 
-// Показать DEBUG кнопку только для админов
-function showDebugButtonForAdmins() {
-    const currentUserId = window.gamesManager ? window.gamesManager.getUserId() : null;
-    const debugBtn = document.getElementById('debug-btn');
+// === СКРЫТАЯ АДМИН-ПАНЕЛЬ ===
+
+let adminClickCount = 0;
+let adminClickTimer = null;
+
+// Секретный вход для админов (5 кликов по заголовку)
+window.adminClickCounter = function() {
+    adminClickCount++;
     
-    if (debugBtn && checkAdminRights(currentUserId)) {
-        debugBtn.style.display = 'inline-block';
-        console.log('🔑 Admin access granted - DEBUG button visible');
+    // Сброс счетчика через 3 секунды
+    if (adminClickTimer) clearTimeout(adminClickTimer);
+    adminClickTimer = setTimeout(() => {
+        adminClickCount = 0;
+    }, 3000);
+    
+    // Проверяем админские права и количество кликов
+    if (adminClickCount >= 5) {
+        const currentUserId = window.gamesManager ? window.gamesManager.getUserId() : null;
+        if (checkAdminRights(currentUserId)) {
+            adminClickCount = 0;
+            showAdminPanel();
+        } else {
+            alert('❌ Access denied');
+            adminClickCount = 0;
+        }
     }
+};
+
+// Новая админ-панель
+function showAdminPanel() {
+    const adminModal = document.createElement('div');
+    adminModal.id = 'admin-panel-modal';
+    adminModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: #00ff00;
+        font-family: 'Courier New', monospace;
+    `;
+    
+    adminModal.innerHTML = `
+        <div style="
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #00ff41;
+            box-shadow: 0 0 30px rgba(0, 255, 65, 0.3);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        ">
+            <h2 style="color: #ff6b6b; margin-bottom: 20px;">🔐 ADMIN PANEL</h2>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 10px; color: #00ffff;">
+                    👤 User Telegram ID:
+                </label>
+                <input type="text" id="target-user-id" placeholder="Enter user ID (leave empty for yourself)" style="
+                    width: 100%;
+                    padding: 10px;
+                    background: rgba(0, 0, 0, 0.7);
+                    border: 1px solid #00ff41;
+                    border-radius: 5px;
+                    color: #00ff00;
+                    font-family: 'Courier New', monospace;
+                    box-sizing: border-box;
+                ">
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <h3 style="color: #ffa502; margin-bottom: 15px;">🚀 ВЫДАТЬ БУСТ:</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button onclick="adminGiveBoost('3x')" style="
+                        background: linear-gradient(135deg, #00d2d3, #00b894);
+                        color: white;
+                        border: none;
+                        padding: 10px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 12px;
+                    ">3x (15 мин)</button>
+                    
+                    <button onclick="adminGiveBoost('10x')" style="
+                        background: linear-gradient(135deg, #fdcb6e, #e17055);
+                        color: white;
+                        border: none;
+                        padding: 10px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 12px;
+                    ">10x (10 мин)</button>
+                    
+                    <button onclick="adminGiveBoost('20x')" style="
+                        background: linear-gradient(135deg, #fd79a8, #e84393);
+                        color: white;
+                        border: none;
+                        padding: 10px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 12px;
+                    ">20x (10 мин)</button>
+                    
+                    <button onclick="adminGiveBoost('50x')" style="
+                        background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+                        color: white;
+                        border: none;
+                        padding: 10px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 12px;
+                    ">50x (10 мин)</button>
+                    
+                    <button onclick="adminGiveBoost('100x')" style="
+                        background: linear-gradient(135deg, #ff7675, #d63031);
+                        color: white;
+                        border: none;
+                        padding: 10px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 12px;
+                    ">100x (10 мин)</button>
+                    
+                    <button onclick="adminGiftBoost()" style="
+                        background: linear-gradient(135deg, #55a3ff, #3742fa);
+                        color: white;
+                        border: none;
+                        padding: 10px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 12px;
+                    ">🎁 Подарок 30м</button>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <h3 style="color: #ff6b6b; margin-bottom: 15px;">⚙️ УПРАВЛЕНИЕ:</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button onclick="adminViewUser()" style="
+                        background: linear-gradient(135deg, #00cec9, #00b894);
+                        color: white;
+                        border: none;
+                        padding: 10px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 12px;
+                    ">👁️ Посмотреть</button>
+                    
+                    <button onclick="adminBlockUser()" style="
+                        background: linear-gradient(135deg, #fd79a8, #e84393);
+                        color: white;
+                        border: none;
+                        padding: 10px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 12px;
+                    ">🚫 Ограничить</button>
+                    
+                    <button onclick="adminExtendBoost()" style="
+                        background: linear-gradient(135deg, #fdcb6e, #e17055);
+                        color: white;
+                        border: none;
+                        padding: 10px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 12px;
+                    ">⏰ +30 мин</button>
+                    
+                    <button onclick="adminCompensate()" style="
+                        background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+                        color: white;
+                        border: none;
+                        padding: 10px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 12px;
+                    ">💰 Компенсация</button>
+                </div>
+            </div>
+            
+            <button onclick="closeAdminPanel()" style="
+                background: linear-gradient(135deg, #ff4757, #c44569);
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: bold;
+            ">❌ ЗАКРЫТЬ</button>
+        </div>
+    `;
+    
+    document.body.appendChild(adminModal);
 }
 
-// Функция для запуска диагностики через интерфейс
+// Функции админ-панели
+window.closeAdminPanel = function() {
+    const modal = document.getElementById('admin-panel-modal');
+    if (modal) modal.remove();
+};
+
+window.getTargetUserId = function() {
+    const input = document.getElementById('target-user-id');
+    const inputValue = input ? input.value.trim() : '';
+    return inputValue || window.gamesManager.getUserId();
+};
+
+window.adminGiveBoost = function(boostType) {
+    const targetUserId = getTargetUserId();
+    const result = giveUserBoost(targetUserId, boostType);
+    
+    if (result) {
+        alert(`✅ Буст ${boostType} выдан пользователю ${targetUserId}`);
+    }
+};
+
+window.adminGiftBoost = function() {
+    const targetUserId = getTargetUserId();
+    
+    const giftBoost = {
+        multiplier: 3,
+        scanSpeed: 333,
+        findRate: 15,
+        endTime: Date.now() + (30 * 60 * 1000), // 30 минут
+        symbol: '3x',
+        productName: '🎁 Gift Boost (30 min)',
+        userId: targetUserId,
+        purchaseTime: Date.now(),
+        gift: true,
+        giftReason: 'Admin gift'
+    };
+    
+    window.gamesManager.setUserBoost(targetUserId, giftBoost);
+    localStorage.setItem('activeBoost', JSON.stringify(giftBoost));
+    updateAllSpeedDisplays();
+    
+    alert(`🎁 Подарочный буст (30 мин) выдан пользователю ${targetUserId}`);
+};
+
+window.adminViewUser = function() {
+    const targetUserId = getTargetUserId();
+    const userBoost = window.gamesManager.getUserBoost(targetUserId);
+    
+    let info = `👤 Пользователь: ${targetUserId}\n\n`;
+    
+    if (userBoost) {
+        const timeLeft = Math.max(0, Math.floor((userBoost.endTime - Date.now()) / 1000 / 60));
+        info += `🚀 Активный буст: ${userBoost.productName}\n`;
+        info += `⚡ Мультипликатор: ${userBoost.multiplier}x\n`;
+        info += `⏰ Времени осталось: ${timeLeft} минут\n`;
+        info += `📅 Куплен: ${new Date(userBoost.purchaseTime).toLocaleString()}\n`;
+        
+        if (userBoost.gift) {
+            info += `🎁 Тип: Подарочный\n`;
+        } else if (userBoost.compensation) {
+            info += `💰 Тип: Компенсация\n`;
+        } else if (userBoost.manualGrant) {
+            info += `👨‍💼 Тип: Выдан админом\n`;
+        }
+    } else {
+        info += `❌ Активных бустов нет`;
+    }
+    
+    alert(info);
+};
+
+window.adminBlockUser = function() {
+    const targetUserId = getTargetUserId();
+    
+    if (confirm(`🚫 Ограничить доступ пользователю ${targetUserId}?`)) {
+        // Удаляем все бусты
+        window.gamesManager.removeUserBoost(targetUserId);
+        
+        // Добавляем в черный список (можно расширить)
+        const blockedUsers = JSON.parse(localStorage.getItem('blockedUsers') || '[]');
+        if (!blockedUsers.includes(targetUserId)) {
+            blockedUsers.push(targetUserId);
+            localStorage.setItem('blockedUsers', JSON.stringify(blockedUsers));
+        }
+        
+        alert(`🚫 Пользователь ${targetUserId} ограничен`);
+    }
+};
+
+window.adminExtendBoost = function() {
+    const targetUserId = getTargetUserId();
+    const userBoost = window.gamesManager.getUserBoost(targetUserId);
+    
+    if (userBoost) {
+        userBoost.endTime += 30 * 60 * 1000; // +30 минут
+        window.gamesManager.setUserBoost(targetUserId, userBoost);
+        
+        // Если это текущий пользователь - обновляем activeBoost
+        if (targetUserId === window.gamesManager.getUserId()) {
+            localStorage.setItem('activeBoost', JSON.stringify(userBoost));
+        }
+        
+        alert(`⏰ Буст продлен на 30 минут для пользователя ${targetUserId}`);
+    } else {
+        alert(`❌ У пользователя ${targetUserId} нет активного буста`);
+    }
+};
+
+window.adminCompensate = function() {
+    const targetUserId = getTargetUserId();
+    const result = compensateUser(targetUserId, 'Admin compensation');
+    
+    if (result) {
+        alert(`💰 Компенсация выдана пользователю ${targetUserId}`);
+    }
+};
+
+// Функция для запуска диагностики через интерфейс  
 window.runDiagnostics = function() {
     console.log('🔧 Starting visual diagnostics...');
     
