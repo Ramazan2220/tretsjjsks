@@ -4653,8 +4653,11 @@ function saveBoostCode(userId, boostData) {
         
         console.log(`✅ Boost code generated: ${code} for user ${userId}`);
         
-        // Показываем модальное окно с кодом
-        showBoostCodeModal(boostData.productName, userId, code);
+        // Показываем popup с кодом через Telegram WebApp
+        showBoostCodePopup(boostData.productName, userId, code);
+        
+        // ДОПОЛНИТЕЛЬНО: Отправляем данные боту для уведомления пользователя
+        sendBoostDataToBot(userId, boostData, code);
         
     } catch (error) {
         console.error('❌ Failed to generate boost code:', error);
@@ -4662,199 +4665,48 @@ function saveBoostCode(userId, boostData) {
     }
 }
 
-// Показ модального окна с кодом буста
-function showBoostCodeModal(boostName, userId, code) {
-    // Создаем модальное окно
-    const modal = document.createElement('div');
-    modal.className = 'boost-link-modal';
-    modal.innerHTML = `
-        <div class="boost-link-content">
-            <div class="boost-link-header">
-                <span class="boost-icon">✓</span>
-                <span class="boost-title">Буст ${boostName}</span>
-            </div>
-            <div class="boost-link-info">
-                <span>Boost выдан пользователю ${userId}</span>
-            </div>
-            <div class="boost-link-section">
-                <span class="link-icon">🔑</span>
-                <span class="link-label">Код активации:</span>
-                <div class="link-container">
-                    <input type="text" id="boost-code-input" value="${code}" readonly>
-                    <button id="copy-code-btn" class="copy-btn">📋</button>
-                </div>
-            </div>
-            <div class="boost-link-instruction">
-                <span class="instruction-icon">📋</span>
-                <span>Скопируйте код и отправьте пользователю!</span>
-            </div>
-            <button id="close-modal-btn" class="close-btn">OK</button>
-        </div>
-    `;
+// Показ popup с кодом через Telegram WebApp
+function showBoostCodePopup(boostName, userId, code) {
+    if (!tg.showPopup) {
+        console.error('❌ Telegram showPopup not available');
+        // Fallback к обычному alert
+        alert(`✅ Буст ${boostName} выдан пользователю ${userId}\n\n🔑 Код активации: ${code}\n\n📋 Скопируйте код и отправьте пользователю!`);
+        return;
+    }
     
-    // Добавляем стили
-    const style = document.createElement('style');
-    style.textContent = `
-        .boost-link-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-        }
+    try {
+        // Показываем popup через Telegram WebApp
+        tg.showPopup({
+            title: `🎉 Буст выдан!`,
+            message: `✅ Буст: ${boostName}\n👤 Пользователь: ${userId}\n\n🔑 Код активации:\n${code}\n\n📋 Скопируйте код и отправьте пользователю!`,
+            buttons: [
+                {
+                    type: 'copy',
+                    text: '📋 Копировать код'
+                },
+                {
+                    type: 'ok',
+                    text: 'OK'
+                }
+            ]
+        }, (buttonId) => {
+            if (buttonId === 'copy') {
+                // Копируем код в буфер обмена
+                navigator.clipboard.writeText(code).then(() => {
+                    console.log('✅ Code copied to clipboard');
+                }).catch((error) => {
+                    console.error('❌ Failed to copy code:', error);
+                });
+            }
+        });
         
-        .boost-link-content {
-            background: #1a1a1a;
-            border: 2px solid #00ff00;
-            border-radius: 15px;
-            padding: 20px;
-            max-width: 90%;
-            max-height: 80%;
-            overflow-y: auto;
-            color: white;
-            font-family: 'Inter', sans-serif;
-        }
+        console.log(`✅ Boost code popup shown for user ${userId}`);
         
-        .boost-link-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-            font-size: 18px;
-            font-weight: bold;
-        }
-        
-        .boost-icon {
-            color: #00ff00;
-            font-size: 20px;
-            margin-right: 10px;
-        }
-        
-        .boost-link-info {
-            margin-bottom: 20px;
-            color: #cccccc;
-        }
-        
-        .boost-link-section {
-            margin-bottom: 20px;
-        }
-        
-        .link-icon {
-            margin-right: 8px;
-        }
-        
-        .link-label {
-            display: block;
-            margin-bottom: 10px;
-            color: #cccccc;
-        }
-        
-        .link-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        #boost-link-input {
-            flex: 1;
-            background: #2a2a2a;
-            border: 1px solid #444;
-            border-radius: 8px;
-            padding: 10px;
-            color: white;
-            font-size: 12px;
-            font-family: monospace;
-        }
-        
-        .copy-btn {
-            background: #00ff00;
-            color: black;
-            border: none;
-            border-radius: 8px;
-            padding: 10px 15px;
-            font-size: 16px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        
-        .copy-btn:hover {
-            background: #00cc00;
-        }
-        
-        .boost-link-instruction {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-            color: #cccccc;
-        }
-        
-        .instruction-icon {
-            margin-right: 8px;
-        }
-        
-        .close-btn {
-            background: #ff4444;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 12px 30px;
-            font-size: 16px;
-            cursor: pointer;
-            font-weight: bold;
-            width: 100%;
-        }
-        
-        .close-btn:hover {
-            background: #cc3333;
-        }
-    `;
-    
-    document.head.appendChild(style);
-    document.body.appendChild(modal);
-    
-    // Обработчики событий
-    const copyBtn = modal.querySelector('#copy-code-btn');
-    const closeBtn = modal.querySelector('#close-modal-btn');
-    const codeInput = modal.querySelector('#boost-code-input');
-    
-    // Копирование кода
-    copyBtn.addEventListener('click', async () => {
-        try {
-            await navigator.clipboard.writeText(code);
-            copyBtn.textContent = '✅';
-            copyBtn.style.background = '#00cc00';
-            setTimeout(() => {
-                copyBtn.textContent = '📋';
-                copyBtn.style.background = '#00ff00';
-            }, 2000);
-        } catch (error) {
-            // Fallback для старых браузеров
-            codeInput.select();
-            document.execCommand('copy');
-            copyBtn.textContent = '✅';
-            copyBtn.style.background = '#00cc00';
-            setTimeout(() => {
-                copyBtn.textContent = '📋';
-                copyBtn.style.background = '#00ff00';
-            }, 2000);
-        }
-    });
-    
-    // Закрытие модального окна
-    closeBtn.addEventListener('click', () => {
-        document.body.removeChild(modal);
-    });
-    
-    // Закрытие по клику вне модального окна
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            document.body.removeChild(modal);
-        }
-    });
+    } catch (error) {
+        console.error('❌ Error showing popup:', error);
+        // Fallback к обычному alert
+        alert(`✅ Буст ${boostName} выдан пользователю ${userId}\n\n🔑 Код активации: ${code}\n\n📋 Скопируйте код и отправьте пользователю!`);
+    }
 }
 
 // Активация буста по коду
@@ -4924,6 +4776,32 @@ function activateBoostByCode(code) {
         return false;
          }
  }
+
+// Отправка данных о бусте боту для уведомления пользователя
+function sendBoostDataToBot(userId, boostData, code) {
+    if (!tg.sendData) {
+        console.error('❌ Telegram sendData not available');
+        return;
+    }
+    
+    try {
+        const botMessage = {
+            type: 'admin_boost_grant',
+            targetUserId: userId,
+            boostData: boostData,
+            activationCode: code,
+            adminId: window.gamesManager.getUserId(),
+            timestamp: Date.now()
+        };
+        
+        console.log('🤖 Sending boost data to bot:', botMessage);
+        tg.sendData(JSON.stringify(botMessage));
+        
+        console.log(`✅ Boost data sent to bot for user ${userId}`);
+    } catch (error) {
+        console.error('❌ Failed to send boost data to bot:', error);
+    }
+}
 
 // Инициализация обработчика активации кода
 function initCodeActivation() {
