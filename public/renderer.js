@@ -6640,18 +6640,14 @@ window.debugUserPurchases = function(userId = null) {
 
 // Глобальные функции для админ-панели
 window.adminGivePredefinedCode = function(boostType) {
-    alert('🔧 Функция вызвана с параметром: ' + boostType);
     const targetUserId = getTargetUserId();
-    alert('🔧 ID пользователя: ' + targetUserId);
     if (!targetUserId) {
         alert('❌ Не указан ID пользователя! Введите ID в поле выше.');
         return;
     }
     
     // Получаем свободный код
-    alert('🔧 Ищем свободный код для: ' + boostType);
     const availableCode = getAvailableCode(boostType);
-    alert('🔧 Результат поиска: ' + (availableCode ? availableCode.code : 'НЕ НАЙДЕН'));
     
     if (!availableCode) {
         alert(`❌ Нет свободных кодов для буста ${boostType}`);
@@ -6661,27 +6657,14 @@ window.adminGivePredefinedCode = function(boostType) {
     // Показываем код админу
     const message = `🎁 ПРЕДУСТАНОВЛЕННЫЙ КОД\n\n🚀 Буст: ${boostType}\n👤 Пользователь: ${targetUserId}\n🔑 Код: ${availableCode.code}\n\n📋 Скопируйте код и отправьте пользователю!`;
     
-    if (tg.showPopup) {
-        tg.showPopup({
-            title: '🎁 Предустановленный код',
-            message: message,
-            buttons: [
-                {
-                    type: 'copy',
-                    text: '📋 Копировать код'
-                },
-                {
-                    type: 'ok',
-                    text: 'OK'
-                }
-            ]
-        }, (buttonId) => {
-            if (buttonId === 'copy') {
-                navigator.clipboard.writeText(availableCode.code);
-            }
-        });
-    } else {
-        alert(message);
+    alert(message);
+    
+    // Пытаемся скопировать в буфер обмена
+    try {
+        navigator.clipboard.writeText(availableCode.code);
+        alert('✅ Код скопирован в буфер обмена!');
+    } catch (error) {
+        alert('❌ Не удалось скопировать код автоматически. Скопируйте вручную.');
     }
     
     console.log(`✅ Predefined code ${availableCode.code} given to user ${targetUserId}`);
@@ -6749,11 +6732,8 @@ const PREDEFINED_CODES = {
 
 // Функция получения свободного кода для буста
 function getAvailableCode(boostType) {
-    alert('🔧 getAvailableCode вызвана с: ' + boostType);
     const codes = PREDEFINED_CODES[boostType] || [];
-    alert('🔧 Найдено кодов для ' + boostType + ': ' + codes.length);
     const availableCode = codes.find(code => !code.used);
-    alert('🔧 Свободный код: ' + (availableCode ? availableCode.code : 'НЕТ'));
     return availableCode;
 }
 
