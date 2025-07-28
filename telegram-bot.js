@@ -1,8 +1,8 @@
 const TelegramBot = require('node-telegram-bot-api');
 
 // Замените на ваш токен бота
-const BOT_TOKEN = 'YOUR_BOT_TOKEN_HERE';
-const WEB_APP_URL = 'https://your-domain.com'; // URL вашего приложения
+const BOT_TOKEN = '8223532804:AAHXZ_u0qM9NOFrnPp5-I6Ey0GmrfGLteAg';
+const WEB_APP_URL = 'https://t.me/Eagle_Scanner_bot/EScanner'; // URL вашего приложения
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
@@ -218,6 +218,15 @@ bot.on('callback_query', (callbackQuery) => {
             `, { parse_mode: 'Markdown' });
             break;
             
+        default:
+            // Обработка копирования кода
+            if (data.startsWith('copy_code_')) {
+                const code = data.replace('copy_code_', '');
+                bot.answerCallbackQuery(callbackQuery.id, `✅ Код ${code} скопирован!`);
+                console.log(`📋 Code ${code} copied by user ${userId}`);
+            }
+            break;
+            
         case 'stats':
             bot.sendMessage(chatId, `
 📊 *Статистика Eagle Scanner*
@@ -251,6 +260,11 @@ bot.on('web_app_data', (msg) => {
     
     // Обработка различных событий от приложения
     switch (data.type) {
+        case 'admin_boost_grant':
+            // НОВОЕ: Админ выдает буст пользователю
+            handleAdminBoostGrant(chatId, data);
+            break;
+            
         case 'purchase_completed':
             bot.sendMessage(chatId, `
 ✅ *Покупка успешна!*
@@ -288,6 +302,67 @@ bot.on('web_app_data', (msg) => {
             break;
     }
 });
+
+// === НОВАЯ ФУНКЦИЯ: Обработка выдачи буста админом ===
+async function handleAdminBoostGrant(adminChatId, data) {
+    console.log('🔐 Admin boost grant received:', data);
+    
+    const { targetUserId, boostData, activationCode, adminId } = data;
+    
+    try {
+        // Отправляем уведомление целевому пользователю с кодом
+        const timeLeft = Math.round((boostData.endTime - Date.now()) / 60000);
+        const notificationMessage = `
+🎉 *Вам выдан буст от админа!*
+
+🚀 *Буст:* ${boostData.productName}
+⚡ *Мультипликатор:* ${boostData.multiplier}x
+⏰ *Длительность:* ${timeLeft} минут
+
+🔑 *Код активации:* \`${activationCode}\`
+
+👨‍💼 *От админа:* ${adminId}
+
+Введите код в приложении для активации! 👇
+        `;
+        
+        // Отправляем уведомление пользователю с кнопкой активации
+        await bot.sendMessage(targetUserId, notificationMessage, { 
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        {
+                            text: '🚀 Открыть приложение',
+                            web_app: { url: WEB_APP_URL }
+                        }
+                    ],
+                    [
+                        {
+                            text: '📋 Копировать код',
+                            callback_data: `copy_code_${activationCode}`
+                        }
+                    ]
+                ]
+            }
+        });
+        
+        console.log(`✅ Boost notification with code sent to user ${targetUserId}`);
+        
+        // Отправляем подтверждение админу
+        await bot.sendMessage(adminChatId, `✅ Буст ${boostData.multiplier}x с кодом ${activationCode} отправлен пользователю ${targetUserId}!`);
+        
+    } catch (error) {
+        console.error('❌ Error sending boost notification:', error);
+        
+        // Уведомляем админа об ошибке
+        try {
+            await bot.sendMessage(adminChatId, `❌ Ошибка отправки буста пользователю ${targetUserId}: ${error.message}`);
+        } catch (e) {
+            console.error('❌ Failed to send error message to admin:', e);
+        }
+    }
+}
 
 // Обработка ошибок
 bot.on('error', (error) => {
