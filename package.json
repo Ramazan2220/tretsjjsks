@@ -1,0 +1,22 @@
+{
+  "name": "crypto-scanner-bot",
+  "version": "2.0.0",
+  "description": "Eagle Scanner - Advanced Crypto Wallet Scanner with Telegram Mini App",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "web": "node server.js",
+    "bot": "node telegram-bot.js",
+    "dev": "node server.js",
+    "dev-bot": "npm run bot"
+  },
+  "dependencies": {
+    "electron": "^34.0.2",
+    "bitcoinjs-lib": "^5.2.0",
+    "ethers": "^5.6.9",
+    "node-telegram-bot-api": "^0.64.0"
+  },
+  "keywords": ["crypto", "scanner", "telegram", "webapp", "miniapp", "bot"],
+  "author": "Eagle Team",
+  "license": "MIT"
+}

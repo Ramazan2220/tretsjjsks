@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Button Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #0B0E1A; color: white; }
+        button { padding: 10px 20px; margin: 10px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #1976D2; }
+        .log { background: #1A2235; padding: 10px; margin: 10px 0; border-radius: 5px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Тест Кнопок Eagle Scanner</h1>
+    
+    <div>
+        <button onclick="testSelectAll()">🔘 Тест Select All</button>
+        <button onclick="testStartScan()">🔍 Тест Start Scan</button>
+        <button onclick="testActivateBoost()">🚀 Тест Activate Boost</button>
+        <button onclick="clearLog()">🗑️ Очистить лог</button>
+    </div>
+    
+    <div id="log" class="log">
+        <div>📝 Лог тестирования:</div>
+    </div>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const now = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div>[${now}] ${message}</div>`;
+        }
+
+        function testSelectAll() {
+            log('🔍 Ищу кнопку Select All...');
+            const btn = document.getElementById('select-all-btn');
+            if (btn) {
+                log('✅ Кнопка Select All найдена!');
+                log('📋 Класс кнопки: ' + btn.className);
+                log('📝 Текст кнопки: ' + btn.textContent);
+            } else {
+                log('❌ Кнопка Select All НЕ найдена!');
+            }
+        }
+
+        function testStartScan() {
+            log('🔍 Ищу кнопку Start Scan...');
+            const btn = document.getElementById('start-scan-btn');
+            if (btn) {
+                log('✅ Кнопка Start Scan найдена!');
+                log('📋 Класс кнопки: ' + btn.className);
+                log('📝 HTML кнопки: ' + btn.outerHTML.substring(0, 100) + '...');
+            } else {
+                log('❌ Кнопка Start Scan НЕ найдена!');
+            }
+        }
+
+        function testActivateBoost() {
+            log('🔍 Ищу кнопку Activate Boost...');
+            const btn = document.getElementById('activate-boost-btn');
+            if (btn) {
+                log('✅ Кнопка Activate Boost найдена!');
+                log('📋 Класс кнопки: ' + btn.className);
+                log('📝 Текст кнопки: ' + btn.textContent);
+            } else {
+                log('❌ Кнопка Activate Boost НЕ найдена!');
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '<div>📝 Лог тестирования:</div>';
+        }
+
+        // Тест при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🚀 Страница загружена, проверяю доступность index.html...');
+            
+            // Пытаемся загрузить index.html в iframe для тестирования
+            const iframe = document.createElement('iframe');
+            iframe.src = 'public/index.html';
+            iframe.style.display = 'none';
+            iframe.onload = () => {
+                log('✅ index.html успешно загружен!');
+                
+                // Проверяем кнопки в iframe
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    
+                    const selectAllBtn = iframeDoc.getElementById('select-all-btn');
+                    const startScanBtn = iframeDoc.getElementById('start-scan-btn');
+                    const activateBoostBtn = iframeDoc.getElementById('activate-boost-btn');
+                    
+                    log(`🔘 Select All кнопка в iframe: ${selectAllBtn ? '✅ найдена' : '❌ не найдена'}`);
+                    log(`🔍 Start Scan кнопка в iframe: ${startScanBtn ? '✅ найдена' : '❌ не найдена'}`);
+                    log(`🚀 Activate Boost кнопка в iframe: ${activateBoostBtn ? '✅ найдена' : '❌ не найдена'}`);
+                    
+                } catch (e) {
+                    log('⚠️ Не удалось получить доступ к содержимому iframe: ' + e.message);
+                }
+            };
+            iframe.onerror = () => {
+                log('❌ Ошибка при загрузке index.html');
+            };
+            
+            document.body.appendChild(iframe);
+        });
+    </script>
+</body>
+</html> 
