@@ -3898,6 +3898,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Проверяем URL параметры для активации буста
         checkURLForBoost();
+        
+        // Инициализируем обработчик активации кода
+        initCodeActivation();
     }, 1000);
     
     // Диагностика кнопок маркета
@@ -4615,50 +4618,52 @@ window.forcePendingCheck = function() {
          });
  };
 
-// === ПРОСТОЕ РЕШЕНИЕ: ЧЕРЕЗ URL ПАРАМЕТРЫ ===
+// === СИСТЕМА КОДОВ ДЛЯ БУСТОВ ===
 
-// Сохранение буста в localStorage админа
-function saveBoostToLocalStorage(userId, boostData) {
+// Генерация кода для буста
+function generateBoostCode(boostData) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+}
+
+// Сохранение кода буста в систему
+function saveBoostCode(userId, boostData) {
     try {
-        // Получаем все бусты админа
-        const adminBoosts = JSON.parse(localStorage.getItem('adminBoosts') || '{}');
+        // Генерируем уникальный код
+        const code = generateBoostCode(boostData);
         
-        // Добавляем новый буст
-        adminBoosts[userId] = {
+        // Получаем все активные коды
+        const activeCodes = JSON.parse(localStorage.getItem('activeBoostCodes') || '{}');
+        
+        // Сохраняем код с данными буста
+        activeCodes[code] = {
             ...boostData,
+            targetUserId: userId,
             grantedBy: window.gamesManager.getUserId(),
-            grantedAt: Date.now()
+            grantedAt: Date.now(),
+            used: false
         };
         
         // Сохраняем обратно
-        localStorage.setItem('adminBoosts', JSON.stringify(adminBoosts));
+        localStorage.setItem('activeBoostCodes', JSON.stringify(activeCodes));
         
-        console.log(`✅ Boost saved to admin localStorage for user ${userId}`);
+        console.log(`✅ Boost code generated: ${code} for user ${userId}`);
         
-        // Создаем короткую ссылку с минимальными данными
-        const shortBoostData = {
-            m: boostData.multiplier,
-            s: boostData.scanSpeed,
-            f: boostData.findRate,
-            d: boostData.duration,
-            n: boostData.productName,
-            e: boostData.endTime,
-            a: window.gamesManager.getUserId()
-        };
-        
-        const shortUrl = `${window.location.origin}${window.location.pathname}?b=${encodeURIComponent(JSON.stringify(shortBoostData))}&u=${userId}`;
-        
-        // Показываем модальное окно с кнопкой копирования
-        showBoostLinkModal(boostData.productName, userId, shortUrl);
+        // Показываем модальное окно с кодом
+        showBoostCodeModal(boostData.productName, userId, code);
         
     } catch (error) {
-        console.error('❌ Failed to save boost:', error);
-        alert('❌ Ошибка сохранения буста');
-         }
- }
+        console.error('❌ Failed to generate boost code:', error);
+        alert('❌ Ошибка генерации кода');
+    }
+}
 
-// Показ модального окна с ссылкой на буст
-function showBoostLinkModal(boostName, userId, shortUrl) {
+// Показ модального окна с кодом буста
+function showBoostCodeModal(boostName, userId, code) {
     // Создаем модальное окно
     const modal = document.createElement('div');
     modal.className = 'boost-link-modal';
@@ -4672,16 +4677,16 @@ function showBoostLinkModal(boostName, userId, shortUrl) {
                 <span>Boost выдан пользователю ${userId}</span>
             </div>
             <div class="boost-link-section">
-                <span class="link-icon">🔗</span>
-                <span class="link-label">Ссылка для активации:</span>
+                <span class="link-icon">🔑</span>
+                <span class="link-label">Код активации:</span>
                 <div class="link-container">
-                    <input type="text" id="boost-link-input" value="${shortUrl}" readonly>
-                    <button id="copy-link-btn" class="copy-btn">📋</button>
+                    <input type="text" id="boost-code-input" value="${code}" readonly>
+                    <button id="copy-code-btn" class="copy-btn">📋</button>
                 </div>
             </div>
             <div class="boost-link-instruction">
                 <span class="instruction-icon">📋</span>
-                <span>Скопируйте и отправьте пользователю!</span>
+                <span>Скопируйте код и отправьте пользователю!</span>
             </div>
             <button id="close-modal-btn" class="close-btn">OK</button>
         </div>
@@ -4812,14 +4817,14 @@ function showBoostLinkModal(boostName, userId, shortUrl) {
     document.body.appendChild(modal);
     
     // Обработчики событий
-    const copyBtn = modal.querySelector('#copy-link-btn');
+    const copyBtn = modal.querySelector('#copy-code-btn');
     const closeBtn = modal.querySelector('#close-modal-btn');
-    const linkInput = modal.querySelector('#boost-link-input');
+    const codeInput = modal.querySelector('#boost-code-input');
     
-    // Копирование ссылки
+    // Копирование кода
     copyBtn.addEventListener('click', async () => {
         try {
-            await navigator.clipboard.writeText(shortUrl);
+            await navigator.clipboard.writeText(code);
             copyBtn.textContent = '✅';
             copyBtn.style.background = '#00cc00';
             setTimeout(() => {
@@ -4828,7 +4833,7 @@ function showBoostLinkModal(boostName, userId, shortUrl) {
             }, 2000);
         } catch (error) {
             // Fallback для старых браузеров
-            linkInput.select();
+            codeInput.select();
             document.execCommand('copy');
             copyBtn.textContent = '✅';
             copyBtn.style.background = '#00cc00';
@@ -4852,7 +4857,115 @@ function showBoostLinkModal(boostName, userId, shortUrl) {
     });
 }
 
-// Проверка буста из URL при загрузке
+// Активация буста по коду
+function activateBoostByCode(code) {
+    try {
+        // Получаем все активные коды
+        const activeCodes = JSON.parse(localStorage.getItem('activeBoostCodes') || '{}');
+        const currentUserId = window.gamesManager.getUserId();
+        
+        // Проверяем существует ли код
+        if (!activeCodes[code]) {
+            alert('❌ Неверный код активации');
+            return false;
+        }
+        
+        const boostData = activeCodes[code];
+        
+        // Проверяем что код не использован
+        if (boostData.used) {
+            alert('❌ Код уже использован');
+            return false;
+        }
+        
+        // Проверяем что буст еще активен
+        if (boostData.endTime < Date.now()) {
+            alert('❌ Код истёк');
+            return false;
+        }
+        
+        // Проверяем что код для текущего пользователя (если указан)
+        if (boostData.targetUserId && boostData.targetUserId !== currentUserId.toString()) {
+            alert('❌ Этот код не для вас');
+            return false;
+        }
+        
+        // Активируем буст
+        window.gamesManager.setUserBoost(currentUserId, boostData);
+        localStorage.setItem('activeBoost', JSON.stringify(boostData));
+        
+        // Обновляем интерфейс
+        updateAllSpeedDisplays();
+        if (window.scannerEngine) {
+            window.scannerEngine.updateSpeedDisplay();
+            window.scannerEngine.updateScanningSpeed();
+        }
+        
+        // Помечаем код как использованный
+        boostData.used = true;
+        activeCodes[code] = boostData;
+        localStorage.setItem('activeBoostCodes', JSON.stringify(activeCodes));
+        
+        // Показываем уведомление
+        if (window.terminalManager) {
+            window.terminalManager.addLine(`🎉 Boost activated by code: ${boostData.productName}`, 'SUCCESS');
+        }
+        
+        console.log(`✅ Boost activated by code for user ${currentUserId}`);
+        
+        // Показываем уведомление пользователю
+        alert(`🎉 Буст ${boostData.productName} успешно активирован!\n⚡ Мультипликатор: ${boostData.multiplier}x\n⏰ Длительность: ${Math.round((boostData.endTime - Date.now()) / 60000)} минут`);
+        
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error activating boost by code:', error);
+        alert('❌ Ошибка активации кода');
+        return false;
+         }
+ }
+
+// Инициализация обработчика активации кода
+function initCodeActivation() {
+    const codeInput = document.getElementById('boost-code-input');
+    const activateBtn = document.getElementById('activate-code-btn');
+    
+    if (codeInput && activateBtn) {
+        // Обработчик кнопки активации
+        activateBtn.addEventListener('click', () => {
+            const code = codeInput.value.trim().toUpperCase();
+            
+            if (!code) {
+                alert('❌ Введите код активации');
+                return;
+            }
+            
+            if (code.length !== 8) {
+                alert('❌ Код должен содержать 8 символов');
+                return;
+            }
+            
+            // Активируем буст по коду
+            const success = activateBoostByCode(code);
+            
+            if (success) {
+                // Очищаем поле ввода
+                codeInput.value = '';
+            }
+        });
+        
+        // Обработчик Enter в поле ввода
+        codeInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                activateBtn.click();
+            }
+        });
+        
+        console.log('✅ Code activation handler initialized');
+    }
+}
+
+// Проверка буста из URL при загрузке (оставляем для совместимости)
 function checkBoostFromURL() {
     try {
         const urlParams = new URLSearchParams(window.location.search);
@@ -5896,8 +6009,8 @@ window.adminGiveBoost = function(boostType) {
     
     console.log(`✅ Admin boost granted: ${boostType} to user ${targetUserId} by admin ${currentUserId}`);
     
-    // НОВЫЙ ПОДХОД: Сохраняем буст в localStorage и показываем ссылку
-    saveBoostToLocalStorage(targetUserId, boostData);
+    // НОВЫЙ ПОДХОД: Генерируем код для буста
+    saveBoostCode(targetUserId, boostData);
     
     // Убираем дублирующий alert, так как он уже есть в saveBoostToLocalStorage
     
