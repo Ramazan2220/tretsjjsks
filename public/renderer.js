@@ -6641,7 +6641,6 @@ window.debugUserPurchases = function(userId = null) {
 // Глобальные функции для админ-панели
 window.adminGivePredefinedCode = function(boostType) {
     console.log('🔧 adminGivePredefinedCode called with:', boostType);
-    alert('🔧 Тест: функция adminGivePredefinedCode вызвана с параметром: ' + boostType);
     const targetUserId = getTargetUserId();
     console.log('🔧 targetUserId:', targetUserId);
     if (!targetUserId) {
@@ -6650,7 +6649,9 @@ window.adminGivePredefinedCode = function(boostType) {
     }
     
     // Получаем свободный код
+    console.log('🔧 Getting available code for:', boostType);
     const availableCode = getAvailableCode(boostType);
+    console.log('🔧 Available code result:', availableCode);
     
     if (!availableCode) {
         alert(`❌ Нет свободных кодов для буста ${boostType}`);
