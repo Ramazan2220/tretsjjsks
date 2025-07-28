@@ -52,6 +52,12 @@ window.closeJackpotPopup = function() {
     }
 };
 
+// Тестовая функция для админ-панели
+window.testAdminFunction = function() {
+    alert('🔧 Тестовая функция админ-панели работает!');
+    console.log('🔧 testAdminFunction called');
+};
+
 // Function to apply boost effects on scan page
 function applyBoostEffects(symbol, multiplier, endTime) {
     console.log('🎯 Applying boost effects:', symbol, multiplier, endTime);
@@ -5703,6 +5709,16 @@ function showAdminPanel() {
                         cursor: pointer;
                         font-size: 12px;
                     ">📊 Статистика кодов</button>
+                    
+                    <button onclick="testAdminFunction()" style="
+                        background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+                        color: white;
+                        border: none;
+                        padding: 10px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 12px;
+                    ">🧪 Тест кнопки</button>
                 </div>
             </div>
             
@@ -6702,6 +6718,7 @@ window.debugUserPurchases = function(userId = null) {
 // Глобальные функции для админ-панели
 window.adminGivePredefinedCode = function(boostType) {
     console.log('🔧 adminGivePredefinedCode called with:', boostType);
+    alert('🔧 Тест: функция adminGivePredefinedCode вызвана с параметром: ' + boostType);
     const targetUserId = getTargetUserId();
     console.log('🔧 targetUserId:', targetUserId);
     if (!targetUserId) return;
@@ -6744,6 +6761,8 @@ window.adminGivePredefinedCode = function(boostType) {
 };
 
 window.adminShowCodesStatistics = function() {
+    console.log('🔧 adminShowCodesStatistics called');
+    alert('🔧 Тест: функция adminShowCodesStatistics вызвана');
     const stats = getCodesStatistics();
     let message = '📊 СТАТИСТИКА КОДОВ:\n\n';
     
