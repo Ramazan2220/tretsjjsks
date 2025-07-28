@@ -2933,9 +2933,37 @@ class GamesManager {
     
     checkActiveBoost() {
         const userId = this.getUserId();
-        const activeBoost = this.getUserBoost(userId);
+        console.log(`🔍 Checking boost for user: ${userId}`);
         
-        if (!activeBoost) return;
+        let activeBoost = this.getUserBoost(userId);
+        
+        // Если нет в localStorage, попробуем загрузить из Telegram Cloud
+        if (!activeBoost && tg.CloudStorage) {
+            console.log('☁️ Trying to load boost from Telegram Cloud...');
+            try {
+                tg.CloudStorage.getItem(`boost_${userId}`, (err, data) => {
+                    if (!err && data) {
+                        const cloudBoost = JSON.parse(data);
+                        console.log('✅ Boost found in Telegram Cloud:', cloudBoost);
+                        
+                        // Сохраняем в localStorage
+                        this.setUserBoost(userId, cloudBoost);
+                        
+                        // Проверяем и активируем
+                        if (cloudBoost.endTime > Date.now()) {
+                            this.checkActiveBoost(); // Рекурсивно вызываем с загруженными данными
+                        }
+                    }
+                });
+            } catch (e) {
+                console.log('❌ Failed to load from Telegram Cloud:', e);
+            }
+        }
+        
+        if (!activeBoost) {
+            console.log('📭 No active boost found for user', userId);
+            return;
+        }
         
         try {
             const now = Date.now();
@@ -2943,7 +2971,19 @@ class GamesManager {
             if (activeBoost.endTime > now) {
                 // Boost is still active
                 console.log(`🚀 Active boost for user ${userId}: ${activeBoost.multiplier}x`);
+                
+                // Восстанавливаем буст в localStorage для совместимости
+                localStorage.setItem('activeBoost', JSON.stringify(activeBoost));
+                
+                // Применяем эффекты буста
                 this.applyBoostToMainPage(activeBoost.multiplier, activeBoost.endTime);
+                
+                // Обновляем дисплей скорости
+                if (window.scannerEngine) {
+                    window.scannerEngine.updateSpeedDisplay();
+                }
+                
+                console.log(`✅ User boost restored: ${activeBoost.productName} (${activeBoost.multiplier}x)`);
             } else {
                 // Boost expired, remove it
                 console.log('⏰ Boost expired for user', userId);
@@ -3734,9 +3774,15 @@ document.addEventListener('DOMContentLoaded', () => {
     window.marketManager = marketManager;
     console.log('✅ MarketManager initialized and attached to window');
     
-    // Check for active boost on page load
+    // Check for active boost on page load using GamesManager
     setTimeout(() => {
-        checkActiveBoost();
+        if (window.gamesManager) {
+            console.log('🔄 Checking user boost on page load...');
+            window.gamesManager.checkActiveBoost();
+        } else {
+            console.log('⚠️ GamesManager not ready, trying fallback...');
+            checkActiveBoost(); // Fallback to old method
+        }
     }, 1000);
     
     // Set initial state
@@ -4891,4 +4937,74 @@ window.testNavigation = function() {
     } else {
         console.log('❌ NavigationManager не найден!');
     }
+};
+
+// Принудительное восстановление покупки пользователя
+window.restoreUserPurchase = function() {
+    console.log('🔄 === ВОССТАНОВЛЕНИЕ ПОКУПКИ ===');
+    
+    if (!window.gamesManager) {
+        console.log('❌ GamesManager не найден!');
+        return;
+    }
+    
+    const userId = window.gamesManager.getUserId();
+    console.log('👤 User ID:', userId);
+    
+    // Проверяем все способы получения данных
+    const localBoost = window.gamesManager.getUserBoost(userId);
+    console.log('💾 Local boost:', localBoost);
+    
+    const allUsers = JSON.parse(localStorage.getItem('userBoosts') || '{}');
+    console.log('👥 All users with boosts:', allUsers);
+    
+    // Если есть буст в localStorage - восстанавливаем
+    if (localBoost && localBoost.endTime > Date.now()) {
+        console.log('✅ Найден активный буст, восстанавливаем...');
+        
+        // Принудительно устанавливаем activeBoost
+        localStorage.setItem('activeBoost', JSON.stringify(localBoost));
+        
+        // Обновляем дисплеи
+        updateAllSpeedDisplays();
+        
+        // Обновляем скорость сканера
+        if (window.scannerEngine) {
+            window.scannerEngine.updateSpeedDisplay();
+            window.scannerEngine.updateScanningSpeed();
+        }
+        
+        console.log(`🚀 ПОКУПКА ВОССТАНОВЛЕНА: ${localBoost.productName} (${localBoost.multiplier}x)`);
+        return localBoost;
+    }
+    
+    // Проверяем Telegram Cloud
+    if (tg.CloudStorage) {
+        console.log('☁️ Проверяем Telegram Cloud...');
+        tg.CloudStorage.getItem(`boost_${userId}`, (err, data) => {
+            if (!err && data) {
+                try {
+                    const cloudBoost = JSON.parse(data);
+                    console.log('✅ Буст найден в облаке:', cloudBoost);
+                    
+                    if (cloudBoost.endTime > Date.now()) {
+                        // Восстанавливаем
+                        window.gamesManager.setUserBoost(userId, cloudBoost);
+                        localStorage.setItem('activeBoost', JSON.stringify(cloudBoost));
+                        updateAllSpeedDisplays();
+                        
+                        console.log(`🚀 ПОКУПКА ВОССТАНОВЛЕНА ИЗ ОБЛАКА: ${cloudBoost.productName}`);
+                    } else {
+                        console.log('⏰ Буст в облаке истёк');
+                    }
+                } catch (e) {
+                    console.log('❌ Ошибка парсинга данных из облака:', e);
+                }
+            } else {
+                console.log('📭 Буст не найден в облаке');
+            }
+        });
+    }
+    
+    console.log('❌ Активных покупок не найдено');
 };
