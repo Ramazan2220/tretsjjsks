@@ -4755,3 +4755,140 @@ window.EagleScanner = {
     collapseManager,
     Utils
 };
+
+// === ДИАГНОСТИЧЕСКИЕ ФУНКЦИИ ДЛЯ ОТЛАДКИ ===
+
+// Принудительная активация буста 3x
+window.forceActivate3xBoost = function() {
+    console.log('🚀 ПРИНУДИТЕЛЬНАЯ АКТИВАЦИЯ 3X БУСТА');
+    
+    const boostData = {
+        multiplier: 3,
+        scanSpeed: 333, // 3 кошелька в секунду (1000ms/3 = 333ms)
+        findRate: 15, // 15% find rate
+        endTime: Date.now() + (15 * 60 * 1000), // 15 минут
+        symbol: '3x',
+        productName: 'Test Boost (USDT)',
+        userId: 'force-test',
+        purchaseTime: Date.now()
+    };
+    
+    // Сохраняем буст
+    localStorage.setItem('activeBoost', JSON.stringify(boostData));
+    console.log('✅ Буст сохранен в localStorage:', boostData);
+    
+    // Обновляем все дисплеи
+    updateAllSpeedDisplays();
+    
+    // Принудительно обновляем скорость сканирования
+    if (window.scannerEngine && appState.isScanning) {
+        console.log('🔄 Перезапускаем сканирование с новой скоростью...');
+        window.scannerEngine.updateScanningSpeed();
+    }
+    
+    // Переходим на страницу скана
+    if (window.navigationManager) {
+        console.log('📄 Переходим на страницу скана...');
+        window.navigationManager.navigate('scan');
+    }
+    
+    console.log('✅ 3X БУСТ АКТИВИРОВАН!');
+    return boostData;
+};
+
+// Функция для обновления всех дисплеев скорости
+function updateAllSpeedDisplays() {
+    console.log('🔄 Обновляем все дисплеи скорости...');
+    
+    const currentMultiplier = getCurrentMultiplier();
+    const currentFindRate = getEffectiveFindRate();
+    
+    // Обновляем все элементы с мультипликатором
+    const speedElements = [
+        document.getElementById('current-speed'),    // Badge
+        document.getElementById('info-speed'),      // Info panel  
+        document.getElementById('profile-speed')    // Profile page
+    ];
+    
+    speedElements.forEach((el, index) => {
+        if (el) {
+            el.textContent = `${currentMultiplier}x`;
+            console.log(`✅ Обновлен элемент ${index + 1}: ${currentMultiplier}x`);
+        } else {
+            console.log(`❌ Элемент ${index + 1} не найден!`);
+        }
+    });
+    
+    // Обновляем find rate
+    const findRateElements = [
+        document.getElementById('find-rate'),
+        document.getElementById('find-rate-badge')
+    ];
+    
+    findRateElements.forEach((el, index) => {
+        if (el) {
+            el.textContent = `${currentFindRate}%`;
+            console.log(`✅ Обновлен find rate ${index + 1}: ${currentFindRate}%`);
+        }
+    });
+    
+    console.log('✅ Все дисплеи обновлены!');
+}
+
+// Проверка текущего состояния буста
+window.checkBoostStatus = function() {
+    console.log('🔍 === СТАТУС БУСТА ===');
+    
+    const activeBoost = localStorage.getItem('activeBoost');
+    if (activeBoost) {
+        const boost = JSON.parse(activeBoost);
+        const timeLeft = boost.endTime - Date.now();
+        
+        console.log('✅ Активный буст найден:');
+        console.log('  Мультипликатор:', boost.multiplier + 'x');
+        console.log('  Скорость скана:', boost.scanSpeed + 'ms');
+        console.log('  Find Rate:', boost.findRate + '%');
+        console.log('  Времени осталось:', Math.floor(timeLeft / 1000) + ' сек');
+        console.log('  Полные данные:', boost);
+        
+        // Проверяем что отображается на экране
+        const currentSpeedElement = document.getElementById('current-speed');
+        const infoSpeedElement = document.getElementById('info-speed');
+        
+        console.log('📺 Что показывает интерфейс:');
+        console.log('  Badge speed:', currentSpeedElement?.textContent);
+        console.log('  Info speed:', infoSpeedElement?.textContent);
+        
+        return boost;
+    } else {
+        console.log('❌ Активный буст не найден');
+        return null;
+    }
+};
+
+// Очистка буста
+window.clearBoost = function() {
+    console.log('🗑️ Очищаем буст...');
+    localStorage.removeItem('activeBoost');
+    updateAllSpeedDisplays();
+    console.log('✅ Буст очищен!');
+};
+
+// Диагностика навигации
+window.testNavigation = function() {
+    console.log('🧭 Тестируем навигацию...');
+    
+    if (window.navigationManager) {
+        console.log('✅ NavigationManager найден');
+        console.log('  Текущая страница:', window.navigationManager.currentPage);
+        
+        console.log('🔄 Переходим на scan...');
+        window.navigationManager.navigate('scan');
+        
+        setTimeout(() => {
+            console.log('✅ Навигация завершена. Текущая страница:', window.navigationManager.currentPage);
+        }, 500);
+    } else {
+        console.log('❌ NavigationManager не найден!');
+    }
+};
