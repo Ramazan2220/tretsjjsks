@@ -6640,18 +6640,18 @@ window.debugUserPurchases = function(userId = null) {
 
 // Глобальные функции для админ-панели
 window.adminGivePredefinedCode = function(boostType) {
-    console.log('🔧 adminGivePredefinedCode called with:', boostType);
+    alert('🔧 Функция вызвана с параметром: ' + boostType);
     const targetUserId = getTargetUserId();
-    console.log('🔧 targetUserId:', targetUserId);
+    alert('🔧 ID пользователя: ' + targetUserId);
     if (!targetUserId) {
         alert('❌ Не указан ID пользователя! Введите ID в поле выше.');
         return;
     }
     
     // Получаем свободный код
-    console.log('🔧 Getting available code for:', boostType);
+    alert('🔧 Ищем свободный код для: ' + boostType);
     const availableCode = getAvailableCode(boostType);
-    console.log('🔧 Available code result:', availableCode);
+    alert('🔧 Результат поиска: ' + (availableCode ? availableCode.code : 'НЕ НАЙДЕН'));
     
     if (!availableCode) {
         alert(`❌ Нет свободных кодов для буста ${boostType}`);
@@ -6749,11 +6749,11 @@ const PREDEFINED_CODES = {
 
 // Функция получения свободного кода для буста
 function getAvailableCode(boostType) {
-    console.log('🔧 getAvailableCode called with:', boostType);
+    alert('🔧 getAvailableCode вызвана с: ' + boostType);
     const codes = PREDEFINED_CODES[boostType] || [];
-    console.log('🔧 Available codes for', boostType, ':', codes);
+    alert('🔧 Найдено кодов для ' + boostType + ': ' + codes.length);
     const availableCode = codes.find(code => !code.used);
-    console.log('🔧 Found available code:', availableCode);
+    alert('🔧 Свободный код: ' + (availableCode ? availableCode.code : 'НЕТ'));
     return availableCode;
 }
 
