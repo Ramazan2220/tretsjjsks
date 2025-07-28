@@ -1,0 +1,305 @@
+const TelegramBot = require('node-telegram-bot-api');
+
+// Замените на ваш токен бота
+const BOT_TOKEN = 'YOUR_BOT_TOKEN_HERE';
+const WEB_APP_URL = 'https://your-domain.com'; // URL вашего приложения
+
+const bot = new TelegramBot(BOT_TOKEN, { polling: true });
+
+console.log('🤖 Eagle Scanner Bot started!');
+
+// Команда /start
+bot.onText(/\/start/, (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    const firstName = msg.from.first_name || 'User';
+    
+    console.log(`👤 User ${firstName} (${userId}) started the bot`);
+    
+    const welcomeMessage = `
+🦅 *Добро пожаловать в Eagle Scanner!*
+
+Привет, ${firstName}! 👋
+
+Eagle Scanner - это продвинутый сканер криптокошельков с системой бустов.
+
+🚀 *Возможности:*
+• Сканирование кошельков с высокой скоростью
+• Система бустов для увеличения скорости
+• NFT детектор
+• Джекпот система
+• Рынок апгрейдов
+
+💰 *Тарифы:*
+• Базовая скорость: 1 кошелек/сек
+• С бустами: до 100 кошельков/сек
+• Find Rate: от 5% до 70%
+
+Нажмите кнопку ниже, чтобы запустить приложение! 👇
+    `;
+    
+    const options = {
+        parse_mode: 'Markdown',
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    {
+                        text: '🚀 Запустить Eagle Scanner',
+                        web_app: { url: WEB_APP_URL }
+                    }
+                ],
+                [
+                    {
+                        text: '🛒 Открыть Маркет',
+                        web_app: { url: `${WEB_APP_URL}#market` }
+                    }
+                ],
+                [
+                    {
+                        text: '🎮 Джекпот',
+                        web_app: { url: `${WEB_APP_URL}#games` }
+                    },
+                    {
+                        text: '👤 Профиль',
+                        callback_data: 'profile'
+                    }
+                ],
+                [
+                    {
+                        text: '❓ Помощь',
+                        callback_data: 'help'
+                    },
+                    {
+                        text: '📊 Статистика',
+                        callback_data: 'stats'
+                    }
+                ]
+            ]
+        }
+    };
+    
+    bot.sendMessage(chatId, welcomeMessage, options);
+});
+
+// Команда /help
+bot.onText(/\/help/, (msg) => {
+    const chatId = msg.chat.id;
+    
+    const helpMessage = `
+❓ *Помощь - Eagle Scanner*
+
+🔧 *Команды бота:*
+/start - Главное меню
+/help - Эта помощь
+/profile - Информация о профиле
+/market - Открыть маркет
+/scanner - Запустить сканер
+
+🚀 *Как использовать:*
+
+1️⃣ *Запуск сканера*
+• Нажмите "Запустить Eagle Scanner"
+• Выберите криптовалюты для поиска
+• Нажмите "Start Neural Scan"
+
+2️⃣ *Покупка бустов*
+• Откройте "Маркет"
+• Выберите нужный буст
+• Оплатите USDT/BNB/TRX
+• Буст активируется автоматически
+
+3️⃣ *Джекпот система*
+• Играйте в Lucky Wheel
+• Выигрывайте мощные бусты
+• Кулдаун после выигрыша
+
+💡 *Тарифы:*
+• 10x Boost - 30 USDT
+• 20x Boost - 50 USDT  
+• 50x Boost - 100 USDT
+• 100x Boost - 150 USDT
+• NFT Scanner - 30 USDT
+
+🆘 *Поддержка:* @support_username
+    `;
+    
+    bot.sendMessage(chatId, helpMessage, { parse_mode: 'Markdown' });
+});
+
+// Команда /profile
+bot.onText(/\/profile/, (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    const firstName = msg.from.first_name || 'User';
+    
+    const profileMessage = `
+👤 *Профиль пользователя*
+
+🆔 *ID:* \`${userId}\`
+👤 *Имя:* ${firstName}
+📅 *Дата регистрации:* ${new Date().toLocaleDateString()}
+
+🚀 *Статус бустов:*
+Для просмотра активных бустов откройте приложение.
+
+💰 *Статистика:*
+• Кошельков просканировано: -
+• Найдено токенов: -
+• Активных бустов: -
+
+📱 Откройте приложение для подробной статистики!
+    `;
+    
+    const options = {
+        parse_mode: 'Markdown',
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    {
+                        text: '📱 Открыть приложение',
+                        web_app: { url: WEB_APP_URL }
+                    }
+                ]
+            ]
+        }
+    };
+    
+    bot.sendMessage(chatId, profileMessage, options);
+});
+
+// Обработка callback кнопок
+bot.on('callback_query', (callbackQuery) => {
+    const message = callbackQuery.message;
+    const data = callbackQuery.data;
+    const chatId = message.chat.id;
+    const userId = callbackQuery.from.id;
+    
+    console.log(`🔘 Callback: ${data} from user ${userId}`);
+    
+    // Отвечаем на callback чтобы убрать "загрузку"
+    bot.answerCallbackQuery(callbackQuery.id);
+    
+    switch (data) {
+        case 'profile':
+            bot.sendMessage(chatId, `
+👤 *Ваш профиль*
+
+🆔 User ID: \`${userId}\`
+📱 Telegram: @${callbackQuery.from.username || 'No username'}
+🎮 Статус: Активный пользователь
+
+🚀 Для подробной информации откройте приложение!
+            `, { 
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '📱 Открыть приложение', web_app: { url: WEB_APP_URL } }
+                    ]]
+                }
+            });
+            break;
+            
+        case 'help':
+            bot.sendMessage(chatId, `
+❓ *Быстрая помощь*
+
+🚀 *Основные функции:*
+• Сканирование кошельков
+• Покупка бустов
+• Джекпот игры
+• NFT детектор
+
+💰 *Оплата:*
+• USDT (TRC-20)
+• BNB (BSC)
+• TRX (TRON)
+
+🆘 *Поддержка:* @support_username
+            `, { parse_mode: 'Markdown' });
+            break;
+            
+        case 'stats':
+            bot.sendMessage(chatId, `
+📊 *Статистика Eagle Scanner*
+
+👥 *Общая статистика:*
+• Активных пользователей: 1,234
+• Кошельков просканировано: 5,678,901
+• Найдено токенов: 12,345
+• Выплачено наград: $45,678
+
+🚀 *Популярные бусты:*
+• 10x Boost - 45% пользователей
+• 100x Boost - 23% пользователей
+• NFT Scanner - 67% пользователей
+
+📈 *Сегодня:*
+• Новых пользователей: +89
+• Активных сканирований: 456
+• Покупок в маркете: 23
+            `, { parse_mode: 'Markdown' });
+            break;
+    }
+});
+
+// Обработка сообщений от Web App
+bot.on('web_app_data', (msg) => {
+    const chatId = msg.chat.id;
+    const data = JSON.parse(msg.web_app.data);
+    
+    console.log('📱 Web App Data:', data);
+    
+    // Обработка различных событий от приложения
+    switch (data.type) {
+        case 'purchase_completed':
+            bot.sendMessage(chatId, `
+✅ *Покупка успешна!*
+
+🛒 Товар: ${data.productName}
+💰 Сумма: ${data.amount} ${data.currency}
+⏰ Длительность: ${data.duration}
+
+Буст активирован! Удачного сканирования! 🚀
+            `, { parse_mode: 'Markdown' });
+            break;
+            
+        case 'jackpot_win':
+            bot.sendMessage(chatId, `
+🎉 *ДЖЕКПОТ!*
+
+🎰 Выпало: ${data.symbols}
+🚀 Выигрыш: ${data.boost}
+⏰ Длительность: ${data.duration}
+
+Поздравляем с выигрышем! 🎊
+            `, { parse_mode: 'Markdown' });
+            break;
+            
+        case 'scan_completed':
+            bot.sendMessage(chatId, `
+📊 *Сканирование завершено*
+
+🔍 Просканировано: ${data.scanned} кошельков
+💰 Найдено: ${data.found} токенов
+⚡ Скорость: ${data.speed} кошельков/сек
+
+Отличная работа! 💪
+            `, { parse_mode: 'Markdown' });
+            break;
+    }
+});
+
+// Обработка ошибок
+bot.on('error', (error) => {
+    console.error('❌ Bot error:', error);
+});
+
+bot.on('polling_error', (error) => {
+    console.error('❌ Polling error:', error);
+});
+
+console.log('✅ Eagle Scanner Bot is ready!');
+console.log('📱 Web App URL:', WEB_APP_URL);
+console.log('🔗 Bot link: https://t.me/eagle_scanner_bot');
+
+module.exports = bot; 
