@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Grid</title>
+    <style>
+        .test-crypto-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 10px;
+            padding: 20px;
+            background: #1a1a1a;
+        }
+        
+        .test-crypto-item {
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            color: white;
+            min-height: 65px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body style="background: #0a0a0a; margin: 0; font-family: Arial;">
+
+<h2 style="color: white; text-align: center;">Test: 4 Columns Grid</h2>
+
+<div class="test-crypto-grid">
+    <div class="test-crypto-item">BTC</div>
+    <div class="test-crypto-item">ETH</div>
+    <div class="test-crypto-item">LTC</div>
+    <div class="test-crypto-item">BNB</div>
+    <div class="test-crypto-item">TRX</div>
+    <div class="test-crypto-item">SOL</div>
+    <div class="test-crypto-item">USDT</div>
+    <div class="test-crypto-item">NFT</div>
+</div>
+
+<p style="color: white; text-align: center;">
+    Должно быть 4 элемента в первом ряду и 4 во втором ряду
+</p>
+
+</body>
+</html> 

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSC API Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background: #1a1a1a; 
+            color: #fff; 
+            padding: 20px; 
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+        }
+        .test-section { 
+            background: #2a2a2a; 
+            border: 1px solid #444; 
+            border-radius: 8px; 
+            padding: 20px; 
+            margin: 20px 0; 
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 5px; 
+        }
+        button:hover { background: #0056b3; }
+        .result { 
+            background: #1e1e1e; 
+            border: 1px solid #555; 
+            border-radius: 5px; 
+            padding: 15px; 
+            margin: 10px 0; 
+            white-space: pre-wrap; 
+            max-height: 400px; 
+            overflow-y: auto; 
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .info { color: #17a2b8; }
+        input { 
+            background: #333; 
+            color: white; 
+            border: 1px solid #555; 
+            padding: 8px; 
+            border-radius: 4px; 
+            width: 100%; 
+            margin: 5px 0; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 BSC API Test - Отладка платежной системы</h1>
+        
+        <div class="test-section">
+            <h3>🎯 Ваш кошелек</h3>
+            <input type="text" id="walletAddress" value="0x0476d0b67e7e7e2654F16b31F807868FAf726588" placeholder="BSC Address">
+            <input type="number" id="expectedAmount" value="0.0005" step="0.0001" placeholder="Expected BNB Amount">
+            
+            <button onclick="testDirectAPI()">📡 Test Direct BSCScan API</button>
+            <button onclick="testProxyAPI()">🔄 Test Server Proxy API</button>
+            <button onclick="testSpecificAmount()">🎯 Check Specific Amount</button>
+            <button onclick="clearResults()">🧹 Clear</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Results</h3>
+            <div id="results" class="result">
+Готов к тестированию...
+
+📋 Инструкции:
+1. Убедитесь, что ваш адрес правильный
+2. Укажите точную сумму, которую отправили  
+3. Нажмите "Test Direct BSCScan API" чтобы проверить транзакции
+4. Если не работает, попробуйте "Test Server Proxy API"
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const results = document.getElementById('results');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                'success': '#28a745',
+                'error': '#dc3545', 
+                'warning': '#ffc107',
+                'info': '#17a2b8'
+            };
+            
+            results.innerHTML += `<span style="color: ${colors[type]}">[${timestamp}] ${message}</span>\n`;
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        function clearResults() {
+            results.innerHTML = 'Results cleared...\n';
+        }
+        
+        async function testDirectAPI() {
+            const address = document.getElementById('walletAddress').value;
+            log('🔍 Testing Direct BSCScan API...', 'info');
+            log(`📍 Address: ${address}`, 'info');
+            
+            try {
+                const url = `https://api.bscscan.com/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=20&sort=desc`;
+                log(`📡 URL: ${url}`, 'info');
+                
+                const response = await fetch(url);
+                log(`📊 Response Status: ${response.status}`, response.ok ? 'success' : 'error');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                log(`✅ API Response received`, 'success');
+                log(`📋 Status: ${data.status}`, data.status === '1' ? 'success' : 'error');
+                log(`📊 Message: ${data.message}`, 'info');
+                
+                if (data.status === '1' && data.result && Array.isArray(data.result)) {
+                    log(`🎯 Found ${data.result.length} transactions`, 'success');
+                    
+                    // Show last 5 transactions
+                    data.result.slice(0, 5).forEach((tx, index) => {
+                        const amount = parseFloat(tx.value) / Math.pow(10, 18);
+                        const date = new Date(parseInt(tx.timeStamp) * 1000);
+                        const isIncoming = tx.to && tx.to.toLowerCase() === address.toLowerCase();
+                        
+                        log(``, 'info');
+                        log(`📋 Transaction ${index + 1}:`, 'warning');
+                        log(`  💰 Amount: ${amount} BNB`, 'info');
+                        log(`  📅 Date: ${date.toLocaleString()}`, 'info');
+                        log(`  🔄 Type: ${isIncoming ? 'INCOMING ✅' : 'OUTGOING ❌'}`, isIncoming ? 'success' : 'warning');
+                        log(`  📍 From: ${tx.from}`, 'info');
+                        log(`  📍 To: ${tx.to}`, 'info');
+                        log(`  🔗 Hash: ${tx.hash}`, 'info');
+                    });
+                } else {
+                    log(`❌ No transactions found or API error`, 'error');
+                    log(`🔍 Full response: ${JSON.stringify(data, null, 2)}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Direct API Error: ${error.message}`, 'error');
+                log(`💡 This is likely due to CORS restrictions`, 'warning');
+            }
+        }
+        
+        async function testProxyAPI() {
+            const address = document.getElementById('walletAddress').value;
+            log('🔄 Testing Server Proxy API...', 'info');
+            
+            try {
+                const url = `/api/bsc/${address}`;
+                log(`📡 Proxy URL: ${url}`, 'info');
+                
+                const response = await fetch(url);
+                log(`📊 Proxy Response Status: ${response.status}`, response.ok ? 'success' : 'error');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                log(`✅ Proxy API Response received`, 'success');
+                log(`📋 Status: ${data.status}`, data.status === '1' ? 'success' : 'error');
+                log(`📊 Message: ${data.message}`, 'info');
+                
+                if (data.status === '1' && data.result && Array.isArray(data.result)) {
+                    log(`🎯 Found ${data.result.length} transactions via proxy`, 'success');
+                    
+                    // Show all transactions
+                    data.result.forEach((tx, index) => {
+                        const amount = parseFloat(tx.value) / Math.pow(10, 18);
+                        const date = new Date(parseInt(tx.timeStamp) * 1000);
+                        const isIncoming = tx.to && tx.to.toLowerCase() === address.toLowerCase();
+                        
+                        log(``, 'info');
+                        log(`📋 Transaction ${index + 1}:`, 'warning');
+                        log(`  💰 Amount: ${amount.toFixed(6)} BNB`, 'info');
+                        log(`  📅 Date: ${date.toLocaleString()}`, 'info');
+                        log(`  🔄 Type: ${isIncoming ? 'INCOMING ✅' : 'OUTGOING ❌'}`, isIncoming ? 'success' : 'warning');
+                        log(`  📍 From: ${tx.from}`, 'info');
+                        log(`  📍 To: ${tx.to}`, 'info');
+                        log(`  🔗 Hash: ${tx.hash}`, 'info');
+                        
+                        // Check if this matches our expected amount
+                        const expectedAmount = parseFloat(document.getElementById('expectedAmount').value);
+                        if (Math.abs(amount - expectedAmount) <= 0.0001 && isIncoming) {
+                            log(`  🎯 MATCH! This matches expected amount ${expectedAmount} BNB`, 'success');
+                        }
+                    });
+                } else {
+                    log(`❌ No transactions found via proxy`, 'error');
+                    log(`🔍 Full response: ${JSON.stringify(data, null, 2)}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Proxy API Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testSpecificAmount() {
+            const address = document.getElementById('walletAddress').value;
+            const expectedAmount = parseFloat(document.getElementById('expectedAmount').value);
+            
+            log(`🎯 Looking for specific amount: ${expectedAmount} BNB`, 'warning');
+            log(`📍 On address: ${address}`, 'info');
+            
+            try {
+                const url = `/api/bsc/${address}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.status === '1' && data.result && Array.isArray(data.result)) {
+                    let found = false;
+                    
+                    data.result.forEach((tx, index) => {
+                        const amount = parseFloat(tx.value) / Math.pow(10, 18);
+                        const date = new Date(parseInt(tx.timeStamp) * 1000);
+                        const isIncoming = tx.to && tx.to.toLowerCase() === address.toLowerCase();
+                        
+                        // Check if amount matches (within 0.0001 tolerance)
+                        if (Math.abs(amount - expectedAmount) <= 0.0001 && isIncoming) {
+                            found = true;
+                            log(``, 'info');
+                            log(`🎯 FOUND MATCHING TRANSACTION!`, 'success');
+                            log(`  💰 Amount: ${amount.toFixed(6)} BNB (expected: ${expectedAmount})`, 'success');
+                            log(`  📅 Date: ${date.toLocaleString()}`, 'success');
+                            log(`  📍 From: ${tx.from}`, 'success');
+                            log(`  🔗 Hash: ${tx.hash}`, 'success');
+                            log(`  ✅ This transaction should be detected by the payment system!`, 'success');
+                        }
+                    });
+                    
+                    if (!found) {
+                        log(`❌ No matching transaction found for ${expectedAmount} BNB`, 'error');
+                        log(`💡 Possible reasons:`, 'warning');
+                        log(`   - Transaction not yet confirmed`, 'warning');
+                        log(`   - Amount doesn't match exactly`, 'warning');
+                        log(`   - Transaction is outgoing, not incoming`, 'warning');
+                        log(`   - Transaction is older than API limit`, 'warning');
+                    }
+                } else {
+                    log(`❌ API call failed`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html> 

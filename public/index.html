@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0B0E1A">
+    <title>Eagle Scanner - Crypto Wallet Scanner</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Main Scan Page -->
+        <div class="page active" id="scan-page">
+            <!-- Profile Header -->
+            <header class="profile-header">
+            <div class="profile-info">
+                <div class="profile-avatar">
+                    <img src="../images/ethereum-eth-logo.png" alt="Eagle" class="avatar-image">
+                </div>
+                <div class="profile-details">
+                    <h1 class="profile-name">Eagle</h1>
+                    <span class="profile-username">@mreaglecall</span>
+                </div>
+            </div>
+
+        </header>
+
+        <!-- Crypto Display -->
+        <section class="crypto-display-section">
+            <div class="section-header">
+                <h3>SCANNING CRYPTOCURRENCIES</h3>
+            </div>
+            <div class="crypto-grid">
+                <div class="crypto-item" data-crypto="btc">
+                    <img src="../images/Bitcoin.png" alt="Bitcoin">
+                    <span class="crypto-label">BTC</span>
+                    <div class="nft-flag" id="nft-flag-btc">🎨</div>
+                </div>
+                <div class="crypto-item" data-crypto="eth">
+                    <img src="../images/ethereum-eth-logo.png" alt="Ethereum">
+                    <span class="crypto-label">ETH</span>
+                    <div class="nft-flag" id="nft-flag-eth">🎨</div>
+                </div>
+                <div class="crypto-item" data-crypto="ltc">
+                    <img src="../images/ltc.png" alt="Litecoin">
+                    <span class="crypto-label">LTC</span>
+                    <div class="nft-flag" id="nft-flag-ltc">🎨</div>
+                </div>
+                <div class="crypto-item" data-crypto="bnb">
+                    <img src="../images/bnb.png" alt="BNB">
+                    <span class="crypto-label">BNB</span>
+                    <div class="nft-flag" id="nft-flag-bnb">🎨</div>
+                </div>
+                <div class="crypto-item" data-crypto="trx">
+                    <img src="../images/trx.png" alt="TRON">
+                    <span class="crypto-label">TRX</span>
+                    <div class="nft-flag" id="nft-flag-trx">🎨</div>
+                </div>
+                <div class="crypto-item" data-crypto="sol">
+                    <img src="../images/sol.png" alt="Solana">
+                    <span class="crypto-label">SOL</span>
+                    <div class="nft-flag" id="nft-flag-sol">🎨</div>
+                </div>
+                <div class="crypto-item" data-crypto="usdt">
+                    <img src="../images/tether.png" alt="USDT">
+                    <span class="crypto-label">USDT</span>
+                    <div class="nft-flag" id="nft-flag-usdt">🎨</div>
+                </div>
+                <div class="crypto-item nft-item" data-crypto="nft">
+                    <div class="nft-icon">🎨</div>
+                    <span class="crypto-label">NFT</span>
+                    <div class="nft-status" id="nft-status">INACTIVE</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Information Panel -->
+        <section class="information-panel">
+            <div class="info-header">
+                <h3>INFORMATION</h3>
+                <div class="header-actions">
+                    <div class="refresh-btn" id="refresh-info">⟳</div>
+                    <div class="collapse-btn" id="collapse-info">⌄</div>
+                </div>
+            </div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Speed:</span>
+                    <span class="info-value" id="scan-speed">1 wallet/s</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Boost:</span>
+                                            <span class="info-value" id="info-speed">100x</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Find Rate:</span>
+                    <span class="info-value" id="find-rate">5%</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Network:</span>
+                    <span class="info-value" id="network-speed">128 Mbps</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">GPU:</span>
+                    <span class="info-value" id="gpu-status">Active</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Threads:</span>
+                    <span class="info-value" id="thread-count">120</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Scanner Terminal -->
+        <section class="scanner-terminal">
+            <div class="terminal-header">
+                <span class="terminal-prompt">&gt; NEURAL.SCAN.STATUS</span>
+            </div>
+            <div class="terminal-window">
+                <div class="terminal-content" id="terminal-output">
+                    <div class="terminal-line">System initialized... Ready to scan</div>
+                </div>
+            </div>
+            <!-- Status Badges -->
+            <div class="status-badges">
+                <div class="status-badge scanned-badge">
+                    <div class="badge-icon">📊</div>
+                    <div class="badge-content">
+                        <div class="badge-value" id="scanned-count">0</div>
+                        <div class="badge-label">SCANNED</div>
+                    </div>
+                </div>
+                
+                <div class="status-badge speed-badge">
+                    <div class="badge-icon">⚡</div>
+                    <div class="badge-content">
+                        <div class="badge-value" id="current-speed">100x</div>
+                        <div class="badge-label">SPEED</div>
+                    </div>
+            </div>
+                
+                <div class="status-badge findrate-badge">
+                    <div class="badge-icon">🎯</div>
+                    <div class="badge-content">
+                        <div class="badge-value" id="find-rate-badge">5%</div>
+                        <div class="badge-label">FIND RATE</div>
+                    </div>
+                </div>
+                
+                <div class="status-badge status-badge-online">
+                    <div class="badge-icon">🟢</div>
+                    <div class="badge-content">
+                        <div class="badge-value">ONLINE</div>
+                        <div class="badge-label">STATUS</div>
+                    </div>
+                </div>
+            </div>
+
+
+            <button class="scan-button" id="start-scan-btn">
+                <span class="scan-btn-text">Start Neural Scan</span>
+            </button>
+        </section>
+
+        <!-- Find Wallet Section -->
+        <section class="boost-section">
+            <div class="boost-header">
+                <h2 class="boost-title">FIND <span class="section-accent">WALLET</span></h2>
+                <div class="collapse-btn" id="collapse-boost">⌄</div>
+    </div>
+
+            <div class="balance-cards" id="balance-cards">
+                <div class="balance-card" data-crypto="btc">
+                    <div class="crypto-info">
+                        <img src="../images/Bitcoin.png" alt="BTC" class="crypto-icon">
+                        <div class="crypto-details">
+                            <span class="crypto-name">BTC</span>
+                            <div class="balance-amount" id="btc-balance">0.00000000</div>
+                            <div class="balance-value" id="btc-value">$0.00</div>
+                        </div>
+                    </div>
+                    <button class="withdraw-btn" data-crypto="btc" disabled>
+                        <span>Withdraw</span>
+                    </button>
+                </div>
+
+                <div class="balance-card" data-crypto="eth">
+                    <div class="crypto-info">
+                        <img src="../images/ethereum-eth-logo.png" alt="ETH" class="crypto-icon">
+                        <div class="crypto-details">
+                            <span class="crypto-name">ETH</span>
+                            <div class="balance-amount" id="eth-balance">0.00000000</div>
+                            <div class="balance-value" id="eth-value">$0.00</div>
+                        </div>
+                    </div>
+                    <button class="withdraw-btn" data-crypto="eth" disabled>
+                        <span>Withdraw</span>
+                    </button>
+                </div>
+
+                <div class="balance-card" data-crypto="ltc">
+                    <div class="crypto-info">
+                        <img src="../images/ltc.png" alt="LTC" class="crypto-icon">
+                        <div class="crypto-details">
+                            <span class="crypto-name">LTC</span>
+                            <div class="balance-amount" id="ltc-balance">0.00000000</div>
+                            <div class="balance-value" id="ltc-value">$0.00</div>
+                        </div>
+                    </div>
+                    <button class="withdraw-btn" data-crypto="ltc" disabled>
+                        <span>Withdraw</span>
+                    </button>
+                </div>
+
+                <div class="balance-card" data-crypto="bnb">
+                    <div class="crypto-info">
+                        <img src="../images/bnb.png" alt="BNB" class="crypto-icon">
+                        <div class="crypto-details">
+                            <span class="crypto-name">BNB</span>
+                            <div class="balance-amount" id="bnb-balance">0.00000000</div>
+                            <div class="balance-value" id="bnb-value">$0.00</div>
+                        </div>
+                    </div>
+                    <button class="withdraw-btn" data-crypto="bnb" disabled>
+                        <span>Withdraw</span>
+                    </button>
+                </div>
+
+                <div class="balance-card" data-crypto="trx">
+                    <div class="crypto-info">
+                        <img src="../images/trx.png" alt="TRX" class="crypto-icon">
+                        <div class="crypto-details">
+                            <span class="crypto-name">TRX</span>
+                            <div class="balance-amount" id="trx-balance">0.00000000</div>
+                            <div class="balance-value" id="trx-value">$0.00</div>
+                        </div>
+                    </div>
+                    <button class="withdraw-btn" data-crypto="trx" disabled>
+                        <span>Withdraw</span>
+                    </button>
+    </div>
+
+                <div class="balance-card" data-crypto="sol">
+                    <div class="crypto-info">
+                        <img src="../images/sol.png" alt="SOL" class="crypto-icon">
+                        <div class="crypto-details">
+                            <span class="crypto-name">SOL</span>
+                            <div class="balance-amount" id="sol-balance">0.00000000</div>
+                            <div class="balance-value" id="sol-value">$0.00</div>
+                        </div>
+                    </div>
+                    <button class="withdraw-btn" data-crypto="sol" disabled>
+                        <span>Withdraw</span>
+                    </button>
+    </div>
+
+                <div class="balance-card" data-crypto="usdt">
+                    <div class="crypto-info">
+                        <img src="../images/tether.png" alt="USDT" class="crypto-icon">
+                        <div class="crypto-details">
+                            <span class="crypto-name">USDT</span>
+                            <div class="balance-amount" id="usdt-balance">0.00000000</div>
+                            <div class="balance-value" id="usdt-value">$0.00</div>
+                        </div>
+        </div>
+                    <button class="withdraw-btn" data-crypto="usdt" disabled>
+                        <span>Withdraw</span>
+                    </button>
+    </div>
+    
+                <div class="balance-card" data-crypto="usdc">
+                    <div class="crypto-info">
+                        <img src="../images/tether.png" alt="USDC" class="crypto-icon">
+                        <div class="crypto-details">
+                            <span class="crypto-name">USDC</span>
+                            <div class="balance-amount" id="usdc-balance">0.00000000</div>
+                            <div class="balance-value" id="usdc-value">$0.00</div>
+                        </div>
+                    </div>
+                    <button class="withdraw-btn" data-crypto="usdc" disabled>
+                        <span>Withdraw</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+
+
+        <!-- Found Wallet Modal -->
+        <div class="modal" id="found-modal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>🎯 WALLET DISCOVERED!</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="found-crypto">
+                        <img id="found-crypto-icon" src="" alt="" class="found-crypto-image">
+                        <span id="found-crypto-name"></span>
+                    </div>
+                    <div class="wallet-details">
+                        <div class="detail-row">
+                            <span class="detail-label">Address:</span>
+                            <span class="detail-value" id="found-address"></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Balance:</span>
+                            <span class="detail-value" id="found-balance"></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Value:</span>
+                            <span class="detail-value" id="found-value"></span>
+                        </div>
+                    </div>
+                    <button class="claim-button" id="claim-wallet-btn">
+                        <span>💎 CLAIM WALLET</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Withdraw Modal -->
+        <div class="modal" id="withdraw-modal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>💸 WITHDRAW FUNDS</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="withdraw-crypto">
+                        <img id="withdraw-crypto-icon" src="" alt="" class="found-crypto-image">
+                        <span id="withdraw-crypto-name"></span>
+                    </div>
+                    <div class="withdraw-form">
+                        <div class="form-group">
+                            <label for="withdraw-address">Wallet Address:</label>
+                            <input type="text" id="withdraw-address" class="form-input" placeholder="Enter your wallet address">
+                        </div>
+                        <div class="form-group">
+                            <label for="withdraw-amount">Amount:</label>
+                            <div class="amount-input-group">
+                                <input type="number" id="withdraw-amount" class="form-input" placeholder="0.00000000" step="0.00000001">
+                                <button class="max-btn" id="withdraw-max-btn">MAX</button>
+                            </div>
+                            <div class="available-balance">
+                                Available: <span id="withdraw-available">0.00000000</span> <span id="withdraw-currency">BTC</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="withdraw-fee">Network Fee:</label>
+                            <div class="fee-display" id="withdraw-fee">0.00001 BTC (~$0.96)</div>
+                        </div>
+                    </div>
+                    <button class="withdraw-submit-btn" id="withdraw-submit-btn">
+                        <span>🚀 SUBMIT WITHDRAWAL</span>
+                    </button>
+                </div>
+            </div>
+    </div>
+</div>
+    
+        <!-- Games Page -->
+        <div class="page" id="boost-page">
+            <!-- Games Header -->
+            <section class="games-header-section">
+                <h1 class="games-title">Games</h1>
+                <p class="games-subtitle">Entertainment while your scanner is working</p>
+                <div class="games-disclaimer">
+                    <span class="disclaimer-icon">⚠️</span>
+                    <span class="disclaimer-text">For entertainment purposes only</span>
+                </div>
+            </section>
+
+            <!-- Slot Machine -->
+            <section class="slot-machine-section">
+                <div class="game-card">
+                    <h3 class="game-title">🎰 Crypto Spinner</h3>
+                    <div class="slot-machine">
+                        <div class="slot-reels">
+                            <div class="reel" id="reel1"></div>
+                            <div class="reel" id="reel2"></div>
+                            <div class="reel" id="reel3"></div>
+                        </div>
+                        <button class="spin-btn" id="spin-btn">
+                            <span class="spin-text">SPIN</span>
+                        </button>
+                        <div class="slot-result" id="slot-result">Good luck!</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Prize Table -->
+            <section class="prize-table-section">
+                <div class="game-card">
+                    <h3 class="game-title">🏆 Jackpot Rewards</h3>
+                    <div class="prize-table">
+                        <div class="prize-row jackpot-btc">
+                            <div class="prize-symbols">
+                                <img src="../images/Bitcoin.png" alt="BTC" class="prize-icon">
+                                <img src="../images/Bitcoin.png" alt="BTC" class="prize-icon">
+                                <img src="../images/Bitcoin.png" alt="BTC" class="prize-icon">
+                            </div>
+                            <div class="prize-info">
+                                <div class="prize-name">Bitcoin Jackpot</div>
+                                <div class="prize-reward">🚀 50x Boost for 10 minutes</div>
+                                <div class="prize-chance">Win Chance: 1%</div>
+                            </div>
+                        </div>
+                        
+                        <div class="prize-row jackpot-eth">
+                            <div class="prize-symbols">
+                                <img src="../images/ethereum-eth-logo.png" alt="ETH" class="prize-icon">
+                                <img src="../images/ethereum-eth-logo.png" alt="ETH" class="prize-icon">
+                                <img src="../images/ethereum-eth-logo.png" alt="ETH" class="prize-icon">
+                            </div>
+                            <div class="prize-info">
+                                <div class="prize-name">Ethereum Jackpot</div>
+                                <div class="prize-reward">⚡ 15x Boost for 10 minutes</div>
+                                <div class="prize-chance">Win Chance: 3%</div>
+                            </div>
+                        </div>
+                        
+                        <div class="prize-row jackpot-trx">
+                            <div class="prize-symbols">
+                                <img src="../images/trx.png" alt="TRX" class="prize-icon">
+                                <img src="../images/trx.png" alt="TRX" class="prize-icon">
+                                <img src="../images/trx.png" alt="TRX" class="prize-icon">
+                            </div>
+                            <div class="prize-info">
+                                <div class="prize-name">TRON Jackpot</div>
+                                <div class="prize-reward">🔥 10x Boost for 10 minutes</div>
+                                <div class="prize-chance">Win Chance: 7%</div>
+                            </div>
+                        </div>
+                        
+                        <div class="prize-row jackpot-sol">
+                            <div class="prize-symbols">
+                                <img src="../images/sol.png" alt="SOL" class="prize-icon">
+                                <img src="../images/sol.png" alt="SOL" class="prize-icon">
+                                <img src="../images/sol.png" alt="SOL" class="prize-icon">
+                            </div>
+                            <div class="prize-info">
+                                <div class="prize-name">Solana Jackpot</div>
+                                <div class="prize-reward">✨ 5x Boost for 10 minutes</div>
+                                <div class="prize-chance">Win Chance: 10%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="prize-note">
+                        <span>💡 Match 3 identical symbols to activate boost!</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Games Stats -->
+            <section class="games-stats-section">
+                <div class="stats-card">
+                    <div class="stat-item">
+                        <div class="stat-icon">🎰</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="total-spins">0</div>
+                            <div class="stat-label">Total Spins</div>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-icon">🎡</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="wheel-spins">0</div>
+                            <div class="stat-label">Wheel Spins</div>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-icon">🏆</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="best-combo">None</div>
+                            <div class="stat-label">Best Combo</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Jackpot Popup -->
+        <div class="jackpot-popup hidden" id="jackpot-popup">
+            <div class="jackpot-title">🎉 JACKPOT! 🎉</div>
+            <div class="jackpot-symbols" id="jackpot-symbols">
+                <!-- Symbols will be added dynamically -->
+            </div>
+            <div class="jackpot-boost" id="jackpot-boost">500x Boost Unlocked!</div>
+            <div class="jackpot-timer">Valid for 10 minutes</div>
+            <button class="activate-boost-btn" id="activate-boost-btn">
+                🚀 ACTIVATE BOOST
+            </button>
+            <button class="close-popup-btn" id="close-popup-btn">
+                Maybe Later
+            </button>
+        </div>
+
+        <!-- Market Page -->
+        <div class="page" id="market-page">
+            <!-- Market Header -->
+            <section class="market-header-section">
+                <div class="market-header">
+                    <div class="market-icon">🛒</div>
+                    <div class="market-info">
+                        <h2 class="market-title">Eagle Market</h2>
+                        <p class="market-subtitle">Upgrade your scanning power</p>
+                    </div>
+                    <div class="market-status">
+                        <div class="status-text">Premium Store</div>
+                        <div class="status-label">Eagle Market</div>
+                    </div>
+                </div>
+            </section>
+
+
+
+            <!-- Boosts Section -->
+            <section class="market-boosts-section">
+                <h3 class="section-title">🚀 Scanning Boosts</h3>
+                <div class="products-grid">
+                    <div class="product-card boost-card" data-boost="10x" data-price="30">
+                        <div class="product-header">
+                            <div class="product-icon">⚡</div>
+                            <div class="product-badge">HOT</div>
+                        </div>
+                        <div class="product-content">
+                            <h4 class="product-title">Lightning Boost</h4>
+                            <div class="product-boost">10x Speed</div>
+                            <div class="product-duration">1 month</div>
+                            <div class="product-description">Perfect for quick scans</div>
+                        </div>
+                        <div class="product-footer">
+                            <div class="product-price">
+                                <span class="price-amount">30.0</span>
+                                <span class="price-currency">USDT</span>
+                            </div>
+                            <button class="buy-btn" data-product="boost-10x">Buy Now</button>
+                        </div>
+                    </div>
+
+                    <div class="product-card boost-card" data-boost="20x" data-price="50">
+                        <div class="product-header">
+                            <div class="product-icon">🔥</div>
+                            <div class="product-badge">POPULAR</div>
+                        </div>
+                        <div class="product-content">
+                            <h4 class="product-title">Turbo Boost</h4>
+                            <div class="product-boost">20x Speed</div>
+                            <div class="product-duration">1 month</div>
+                            <div class="product-description">Most popular choice</div>
+                        </div>
+                        <div class="product-footer">
+                            <div class="product-price">
+                                <span class="price-amount">50.0</span>
+                                <span class="price-currency">USDT</span>
+                            </div>
+                            <button class="buy-btn" data-product="boost-20x">Buy Now</button>
+                        </div>
+                    </div>
+
+                    <div class="product-card boost-card" data-boost="50x" data-price="100">
+                        <div class="product-header">
+                            <div class="product-icon">💎</div>
+                            <div class="product-badge">PREMIUM</div>
+                        </div>
+                        <div class="product-content">
+                            <h4 class="product-title">Hyper Boost</h4>
+                            <div class="product-boost">50x Speed</div>
+                            <div class="product-duration">1 month</div>
+                            <div class="product-description">Professional grade</div>
+                        </div>
+                        <div class="product-footer">
+                            <div class="product-price">
+                                <span class="price-amount">100.0</span>
+                                <span class="price-currency">USDT</span>
+                            </div>
+                            <button class="buy-btn" data-product="boost-50x">Buy Now</button>
+                        </div>
+                    </div>
+
+                    <div class="product-card boost-card ultimate" data-boost="100x" data-price="150">
+                        <div class="product-header">
+                            <div class="product-icon">👑</div>
+                            <div class="product-badge">ULTIMATE</div>
+                        </div>
+                        <div class="product-content">
+                            <h4 class="product-title">Ultimate Boost</h4>
+                            <div class="product-boost">100x Speed</div>
+                            <div class="product-duration">1 month</div>
+                            <div class="product-description">Maximum power unleashed</div>
+                        </div>
+                        <div class="product-footer">
+                            <div class="product-price">
+                                <span class="price-amount">150.0</span>
+                                <span class="price-currency">USDT</span>
+                            </div>
+                            <button class="buy-btn" data-product="boost-100x">Buy Now</button>
+                        </div>
+                    </div>
+
+                    <div class="product-card boost-card test" data-boost="2x" data-price="0.0005">
+                        <div class="product-header">
+                            <div class="product-icon">🧪</div>
+                            <div class="product-badge">BNB</div>
+                        </div>
+                        <div class="product-content">
+                            <h4 class="product-title">Test Boost (BNB)</h4>
+                            <div class="product-boost">2x Speed</div>
+                            <div class="product-duration">10 min</div>
+                            <div class="product-description">For payment testing (BSC)</div>
+                        </div>
+                        <div class="product-footer">
+                            <div class="product-price">
+                                <span class="price-amount">0.0005</span>
+                                <span class="price-currency">BNB</span>
+                            </div>
+                            <button class="buy-btn" data-product="test-boost">Buy Now</button>
+                        </div>
+                    </div>
+
+                    <div class="product-card boost-card test-usdt" data-boost="3x" data-price="1.5">
+                        <div class="product-header">
+                            <div class="product-icon">💰</div>
+                            <div class="product-badge">USDT</div>
+                        </div>
+                        <div class="product-content">
+                            <h4 class="product-title">Test Boost (USDT)</h4>
+                            <div class="product-boost">3x Speed</div>
+                            <div class="product-duration">15 min</div>
+                            <div class="product-description">For USDT TRC-20 testing</div>
+                        </div>
+                        <div class="product-footer">
+                            <div class="product-price">
+                                <span class="price-amount">1.5</span>
+                                <span class="price-currency">USDT</span>
+                            </div>
+                            <button class="buy-btn" data-product="test-boost-usdt">Buy Now</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- NFT Search Section -->
+            <section class="market-nft-section">
+                <h3 class="section-title">🎨 NFT Scanner</h3>
+                <div class="products-grid">
+                    <div class="product-card nft-card" data-price="30">
+                        <div class="product-header">
+                            <div class="product-icon">🖼️</div>
+                            <div class="product-badge">NEW</div>
+                        </div>
+                        <div class="product-content">
+                            <h4 class="product-title">NFT Scanner Pro</h4>
+                            <div class="product-features">
+                                <div class="feature">✓ Detect NFT wallets</div>
+                    </div>
+                            <div class="product-description">Unlock NFT scanning capabilities</div>
+                        </div>
+                        <div class="product-footer">
+                            <div class="product-price">
+                                <span class="price-amount">30.0</span>
+                                <span class="price-currency">USDT</span>
+                    </div>
+                            <button class="buy-btn" data-product="nft-scanner">Buy Now</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Boost Benefits Section -->
+            <section class="market-benefits-section">
+                <h3 class="section-title">🚀 Boost Benefits</h3>
+                <div class="benefits-grid">
+                    <div class="benefit-card">
+                        <div class="benefit-icon">⚡</div>
+                        <div class="benefit-content">
+                            <h4 class="benefit-title">Faster Scanning</h4>
+                            <p class="benefit-description">Process more wallets with speeds up to 100x faster than base users</p>
+                        </div>
+                    </div>
+
+                    <div class="benefit-card">
+                        <div class="benefit-icon">🎯</div>
+                        <div class="benefit-content">
+                            <h4 class="benefit-title">Higher Discovery Rate</h4>
+                            <p class="benefit-description">7x better chance to find tokens (70% vs 10% for base users)</p>
+                        </div>
+                    </div>
+
+                    <div class="benefit-card">
+                        <div class="benefit-icon">💰</div>
+                        <div class="benefit-content">
+                            <h4 class="benefit-title">More Valuable Finds</h4>
+                            <p class="benefit-description">Find more tokens per wallet and accumulate value faster</p>
+                </div>
+                    </div>
+                </div>
+            </section>
+
+
+        </div>
+
+        <!-- Info Page -->
+        <div class="page" id="info-page">
+            <div class="info-page-header">
+                <h1 class="page-title">Join Our Community</h1>
+            </div>
+
+            <!-- Community Channels -->
+            <section class="community-section">
+                <div class="community-card">
+                    <div class="card-content">
+                        <h3 class="channel-title">Software Crypto Mining</h3>
+                        <p class="channel-description">Notify when there is a new update for Mini App</p>
+                    </div>
+                    <button class="join-channel-btn" data-channel="main">
+                        <span class="btn-icon">💬</span>
+                        <span class="btn-text">Join Channel</span>
+                    </button>
+                </div>
+
+                <div class="community-card">
+                    <div class="card-content">
+                        <h3 class="channel-title">Tutorial Channel</h3>
+                        <p class="channel-description">Tutorial For Software And Mini App</p>
+                    </div>
+                    <button class="join-channel-btn" data-channel="tutorial">
+                        <span class="btn-icon">💬</span>
+                        <span class="btn-text">Join Channel</span>
+                    </button>
+                </div>
+
+                <div class="community-card">
+                    <div class="card-content">
+                        <h3 class="channel-title">Admin Support</h3>
+                        <p class="channel-description">Admin Support 24/7</p>
+                    </div>
+                    <button class="join-channel-btn" data-channel="support">
+                        <span class="btn-icon">💬</span>
+                        <span class="btn-text">Join Channel</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Additional Info -->
+            <section class="additional-info">
+                <div class="info-card">
+                    <div class="info-header">
+                        <h3>🚀 EAGLE SCANNER</h3>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-row">
+                            <span class="info-key">Status:</span>
+                            <span class="info-status active">Online</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-key">Users:</span>
+                            <span class="info-value">12,847</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-key">Server:</span>
+                            <span class="info-value">EU-Central</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-key">Uptime:</span>
+                            <span class="info-value">99.9%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-header">
+                        <h3>⚡ PERFORMANCE</h3>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-row">
+                            <span class="info-key">Response Time:</span>
+                            <span class="info-value">< 50ms</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-key">Success Rate:</span>
+                            <span class="info-value">98.7%</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-key">Daily Scans:</span>
+                            <span class="info-value">2.3M+</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-key">Found Wallets:</span>
+                            <span class="info-value">14,521</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Profile Page -->
+        <div class="page" id="profile-page">
+            <header class="profile-header">
+                <div class="profile-info">
+                    <div class="profile-avatar">
+                        <img src="../images/ethereum-eth-logo.png" alt="Eagle" class="avatar-image">
+                    </div>
+                    <div class="profile-details">
+                        <h1 class="profile-name">Eagle Scanner</h1>
+                        <span class="profile-username">@mreaglecall</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Profile Stats -->
+            <section class="profile-stats-section">
+                <h3>SCANNING STATISTICS</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">🔍</div>
+                        <div class="stat-number">1,247</div>
+                        <div class="stat-label">Total Scans</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-number">87</div>
+                        <div class="stat-label">Wallets Found</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-number">100x</div>
+                        <div class="stat-label">Current Speed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-number">70%</div>
+                        <div class="stat-label">Success Rate</div>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- Withdrawal History -->
+            <section class="history-section">
+                <div class="section-header">
+                    <h3>WITHDRAWAL HISTORY</h3>
+                    <button class="refresh-btn" id="history-refresh-btn">⟳</button>
+                </div>
+                <div class="history-content">
+                    <div class="empty-state">
+                        <div class="empty-icon">📋</div>
+                        <div class="empty-text">No withdrawal history yet.</div>
+                        <div class="empty-subtitle">Your transactions will appear here</div>
+                    </div>
+    </div>
+            </section>
+
+            <!-- App Info -->
+            <section class="info-section">
+                <div class="section-header">
+                    <h3>APP INFORMATION</h3>
+                </div>
+                <div class="info-list">
+                    <div class="info-item">
+                        <span class="info-label">Version</span>
+                        <span class="info-value">v2.1.0</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Build</span>
+                        <span class="info-value">2024.01.15</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Telegram ID</span>
+                        <span class="info-value">@mreaglecall</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-navigation">
+        <div class="nav-item active" data-page="scan">
+            <div class="nav-icon">🔍</div>
+            <span class="nav-label">Scan</span>
+        </div>
+        <div class="nav-item" data-page="boost">
+            <div class="nav-icon">🚀</div>
+            <span class="nav-label">Boost</span>
+        </div>
+        <div class="nav-item" data-page="market">
+            <div class="nav-icon">🛒</div>
+            <span class="nav-label">Market</span>
+        </div>
+        <div class="nav-item" data-page="info">
+            <div class="nav-icon">ℹ️</div>
+            <span class="nav-label">Info</span>
+        </div>
+        <div class="nav-item" data-page="profile">
+            <div class="nav-icon">👤</div>
+            <span class="nav-label">Profile</span>
+    </div>
+    </nav>
+
+    <script src="renderer.js"></script>
+</body>
+</html>

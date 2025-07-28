@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSC Direct Check - Alternative</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background: #1a1a1a; 
+            color: #fff; 
+            padding: 20px; 
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+        }
+        .section { 
+            background: #2a2a2a; 
+            border: 1px solid #444; 
+            border-radius: 8px; 
+            padding: 20px; 
+            margin: 20px 0; 
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 5px; 
+        }
+        button:hover { background: #0056b3; }
+        .result { 
+            background: #1e1e1e; 
+            border: 1px solid #555; 
+            border-radius: 5px; 
+            padding: 15px; 
+            margin: 10px 0; 
+            font-family: monospace;
+            white-space: pre-wrap; 
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .info { color: #17a2b8; }
+        input { 
+            background: #333; 
+            color: white; 
+            border: 1px solid #555; 
+            padding: 8px; 
+            border-radius: 4px; 
+            width: 100%; 
+            margin: 5px 0; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Альтернативная проверка BSC транзакций</h1>
+        
+        <div class="section">
+            <h3>💡 Быстрый тест платежной системы</h3>
+            <button onclick="quickTest()">🚀 Быстрый тест с симуляцией</button>
+            <button onclick="testWebhook()">🔔 Тест Webhook подхода</button>
+            <button onclick="testUniqueAddress()">🎯 Тест уникального адреса</button>
+        </div>
+
+        <div class="section">
+            <h3>🔍 Проверка баланса через Web3</h3>
+            <input type="text" id="checkAddress" value="0x0476d0b67e7e7e2654F16b31F807868FAf726588" placeholder="BSC Address">
+            <button onclick="checkBalance()">💰 Проверить баланс</button>
+            <button onclick="checkLatestBlock()">📦 Последний блок BSC</button>
+        </div>
+
+        <div class="section">
+            <h3>📊 Результаты</h3>
+            <div id="results" class="result">Готов к тестированию...</div>
+        </div>
+    </div>
+
+    <script>
+        const results = document.getElementById('results');
+        const BSC_RPC = 'https://bsc-dataseed.binance.org/';
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = { success: '#28a745', error: '#dc3545', warning: '#ffc107', info: '#17a2b8' };
+            results.innerHTML += `<span style="color: ${colors[type]}">[${timestamp}] ${message}</span>\n`;
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        function clearLog() {
+            results.innerHTML = '';
+        }
+        
+        // Быстрый тест симуляции
+        async function quickTest() {
+            clearLog();
+            log('🚀 Запускаем быстрый тест платежной системы...', 'info');
+            
+            // Симулируем создание платежа
+            log('📝 Создаем тестовый платеж...', 'info');
+            
+            // Проверяем доступность основного приложения
+            try {
+                const response = await fetch('/');
+                if (response.ok) {
+                    log('✅ Основное приложение доступно', 'success');
+                    log('', 'info');
+                    log('📋 Инструкция для теста:', 'warning');
+                    log('1. Откройте http://localhost:3000 в новой вкладке', 'info');
+                    log('2. Откройте консоль (F12)', 'info');
+                    log('3. Скопируйте и выполните:', 'info');
+                    log('', 'info');
+                    log('// Создать платеж и сразу подтвердить', 'success');
+                    log('walletPoolManager.createPayment("test-boost", 0.0005, "BNB")', 'success');
+                    log('setTimeout(() => manualConfirmPayment(), 2000)', 'success');
+                    log('', 'info');
+                    log('✅ Это активирует Test Boost без реальной оплаты!', 'success');
+                } else {
+                    log('❌ Основное приложение недоступно', 'error');
+                }
+            } catch (error) {
+                log(`❌ Ошибка: ${error.message}`, 'error');
+            }
+        }
+        
+        // Тест Webhook подхода
+        function testWebhook() {
+            clearLog();
+            log('🔔 Webhook подход для платежей', 'info');
+            log('', 'info');
+            log('💡 Альтернативное решение: Платежные провайдеры с Webhook', 'warning');
+            log('', 'info');
+            log('✅ Преимущества:', 'success');
+            log('  - Мгновенные уведомления о платежах', 'info');
+            log('  - Не нужен API для проверки', 'info');
+            log('  - Высокая надежность', 'info');
+            log('', 'info');
+            log('🎯 Рекомендуемые сервисы:', 'warning');
+            log('  1. CoinPayments - поддерживает BNB и webhook', 'info');
+            log('  2. NOWPayments - простая интеграция', 'info');
+            log('  3. CoinGate - популярный выбор', 'info');
+            log('  4. Binance Pay - официальный от Binance', 'info');
+            log('', 'info');
+            log('📝 Как это работает:', 'info');
+            log('  1. Пользователь платит через форму провайдера', 'info');
+            log('  2. Провайдер отправляет webhook на ваш сервер', 'info');
+            log('  3. Сервер активирует продукт автоматически', 'info');
+        }
+        
+        // Тест уникального адреса
+        function testUniqueAddress() {
+            clearLog();
+            log('🎯 Подход с уникальными адресами', 'info');
+            log('', 'info');
+            log('💡 Решение: HD Wallet (Hierarchical Deterministic)', 'warning');
+            log('', 'info');
+            log('📋 Как это работает:', 'info');
+            log('  1. Генерируем уникальный адрес для каждого платежа', 'info');
+            log('  2. Мониторим только этот адрес', 'info');
+            log('  3. Любая транзакция = успешный платеж', 'info');
+            log('', 'info');
+            log('✅ Преимущества:', 'success');
+            log('  - Не нужно проверять сумму', 'info');
+            log('  - Нет конфликтов между платежами', 'info');
+            log('  - Простая логика проверки', 'info');
+            log('', 'info');
+            log('🔧 Реализация:', 'warning');
+            log('  const { HDNode } = require("ethers")', 'info');
+            log('  const masterKey = "ваш мастер ключ"', 'info');
+            log('  const wallet = HDNode.fromMnemonic(masterKey)', 'info');
+            log('  const newAddress = wallet.derivePath(`m/44\'/60\'/0\'/0/${index}`)', 'info');
+        }
+        
+        // Проверка баланса через RPC
+        async function checkBalance() {
+            const address = document.getElementById('checkAddress').value;
+            log(`💰 Проверяем баланс ${address}...`, 'info');
+            
+            try {
+                const response = await fetch(BSC_RPC, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'eth_getBalance',
+                        params: [address, 'latest'],
+                        id: 1
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.result) {
+                    const balanceWei = parseInt(data.result, 16);
+                    const balanceBNB = balanceWei / 1e18;
+                    log(`✅ Баланс: ${balanceBNB.toFixed(6)} BNB`, 'success');
+                } else {
+                    log(`❌ Ошибка: ${data.error?.message || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Ошибка RPC: ${error.message}`, 'error');
+            }
+        }
+        
+        // Проверка последнего блока
+        async function checkLatestBlock() {
+            log(`📦 Проверяем последний блок BSC...`, 'info');
+            
+            try {
+                const response = await fetch(BSC_RPC, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'eth_blockNumber',
+                        params: [],
+                        id: 1
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.result) {
+                    const blockNumber = parseInt(data.result, 16);
+                    log(`✅ Последний блок: #${blockNumber}`, 'success');
+                    log(`📊 BSC RPC работает корректно!`, 'success');
+                } else {
+                    log(`❌ Ошибка: ${data.error?.message || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Ошибка RPC: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html> 
