@@ -284,7 +284,7 @@ function getCurrentMultiplier() {
         }
     }
     
-    return 100; // Base multiplier (показывать 100x как базовую скорость)
+    return 1; // Base multiplier (no boost = 1x speed)
 }
 
 // Application State
@@ -1499,6 +1499,13 @@ class MarketManager {
         this.showNotification(`✅ Payment successful! ${product.name} activated!`, 'success');
         this.updatePurchaseHistory();
         Utils.triggerHaptic('success');
+        
+        // Navigate to scan page after successful purchase
+        if (window.navigationManager) {
+            setTimeout(() => {
+                window.navigationManager.navigate('scan');
+            }, 1000); // Small delay to show notification first
+        }
     }
 
     activateBoost(product) {
@@ -2687,9 +2694,12 @@ class GamesManager {
         // Update speed display
         if (window.scannerEngine) {
             window.scannerEngine.updateSpeedDisplay();
+            // Also update scanning speed if currently scanning
+            window.scannerEngine.updateScanningSpeed();
         }
         
         console.log(`✅ ${product.name} activated for user ${userId} until ${new Date(boostEndTime).toLocaleString()}`);
+        console.log(`🚀 Boost data saved:`, boostData);
     }
     
     // Activate NFT features
@@ -3561,6 +3571,12 @@ class ScannerEngine {
             infoSpeedElement.textContent = `${currentMultiplier}x`;
         }
         
+        // Update profile page speed
+        const profileSpeedElement = document.getElementById('profile-speed');
+        if (profileSpeedElement) {
+            profileSpeedElement.textContent = `${currentMultiplier}x`;
+        }
+        
         // Update find rate in info panel
         if (findRateElement) {
             findRateElement.textContent = `${currentFindRate}%`;
@@ -3704,6 +3720,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialize all managers after DOM is ready
     navigationManager = new NavigationManager();
+    window.navigationManager = navigationManager; // Make globally accessible
     modalManager = new ModalManager();
     withdrawManager = new WithdrawManager();
     cryptoSelectorManager = new CryptoSelectorManager();
