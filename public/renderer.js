@@ -52,11 +52,7 @@ window.closeJackpotPopup = function() {
     }
 };
 
-// Тестовая функция для админ-панели
-window.testAdminFunction = function() {
-    alert('🔧 Тестовая функция админ-панели работает!');
-    console.log('🔧 testAdminFunction called');
-};
+
 
 // Function to apply boost effects on scan page
 function applyBoostEffects(symbol, multiplier, endTime) {
@@ -5709,16 +5705,6 @@ function showAdminPanel() {
                         cursor: pointer;
                         font-size: 12px;
                     ">📊 Статистика кодов</button>
-                    
-                    <button onclick="testAdminFunction()" style="
-                        background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-                        color: white;
-                        border: none;
-                        padding: 10px;
-                        border-radius: 5px;
-                        cursor: pointer;
-                        font-size: 12px;
-                    ">🧪 Тест кнопки</button>
                 </div>
             </div>
             
@@ -5744,73 +5730,10 @@ function showAdminPanel() {
                         cursor: pointer;
                         font-size: 12px;
                     ">🚫 Ограничить</button>
-                    
-                    <button onclick="adminExtendBoost()" style="
-                        background: linear-gradient(135deg, #fdcb6e, #e17055);
-                        color: white;
-                        border: none;
-                        padding: 10px;
-                        border-radius: 5px;
-                        cursor: pointer;
-                        font-size: 12px;
-                    ">⏰ +30 мин</button>
-                    
-                                         <button onclick="adminCompensate()" style="
-                         background: linear-gradient(135deg, #a29bfe, #6c5ce7);
-                         color: white;
-                         border: none;
-                         padding: 10px;
-                         border-radius: 5px;
-                         cursor: pointer;
-                         font-size: 12px;
-                     ">💰 Компенсация</button>
-                 </div>
+                </div>
              </div>
              
-             <div style="margin-bottom: 20px;">
-                 <h3 style="color: #00d2d3; margin-bottom: 15px;">☁️ СИНХРОНИЗАЦИЯ:</h3>
-                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                     <button onclick="syncAllToCloud()" style="
-                         background: linear-gradient(135deg, #00d2d3, #00b894);
-                         color: white;
-                         border: none;
-                         padding: 10px;
-                         border-radius: 5px;
-                         cursor: pointer;
-                         font-size: 12px;
-                     ">☁️ Синхронизация</button>
-                     
-                     <button onclick="loadAllFromCloud()" style="
-                         background: linear-gradient(135deg, #55a3ff, #3742fa);
-                         color: white;
-                         border: none;
-                         padding: 10px;
-                         border-radius: 5px;
-                         cursor: pointer;
-                         font-size: 12px;
-                     ">⬇️ Восстановить</button>
-                     
-                     <button onclick="checkPendingBoosts()" style="
-                         background: linear-gradient(135deg, #ffa502, #ff6348);
-                         color: white;
-                         border: none;
-                         padding: 10px;
-                         border-radius: 5px;
-                         cursor: pointer;
-                         font-size: 12px;
-                     ">📋 Очередь</button>
-                     
-                     <button onclick="forcePendingCheck()" style="
-                         background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-                         color: white;
-                         border: none;
-                         padding: 10px;
-                         border-radius: 5px;
-                         cursor: pointer;
-                         font-size: 12px;
-                     ">🔄 Проверить</button>
-                 </div>
-             </div>
+
             
             <button onclick="closeAdminPanel()" style="
                 background: linear-gradient(135deg, #ff4757, #c44569);
@@ -6718,7 +6641,6 @@ window.debugUserPurchases = function(userId = null) {
 // Глобальные функции для админ-панели
 window.adminGivePredefinedCode = function(boostType) {
     console.log('🔧 adminGivePredefinedCode called with:', boostType);
-    alert('🔧 Тест: функция adminGivePredefinedCode вызвана с параметром: ' + boostType);
     const targetUserId = getTargetUserId();
     console.log('🔧 targetUserId:', targetUserId);
     if (!targetUserId) return;
@@ -6762,7 +6684,6 @@ window.adminGivePredefinedCode = function(boostType) {
 
 window.adminShowCodesStatistics = function() {
     console.log('🔧 adminShowCodesStatistics called');
-    alert('🔧 Тест: функция adminShowCodesStatistics вызвана');
     const stats = getCodesStatistics();
     let message = '📊 СТАТИСТИКА КОДОВ:\n\n';
     
