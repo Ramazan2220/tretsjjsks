@@ -4854,61 +4854,7 @@ function initCodeActivation() {
     }
 }
 
-// Функция выдачи предустановленного кода
-window.adminGivePredefinedCode = function(boostType) {
-    const targetUserId = getTargetUserId();
-    if (!targetUserId) return;
-    
-    // Получаем свободный код
-    const availableCode = getAvailableCode(boostType);
-    
-    if (!availableCode) {
-        alert(`❌ Нет свободных кодов для буста ${boostType}`);
-        return;
-    }
-    
-    // Показываем код админу
-    const message = `🎁 ПРЕДУСТАНОВЛЕННЫЙ КОД\n\n🚀 Буст: ${boostType}\n👤 Пользователь: ${targetUserId}\n🔑 Код: ${availableCode.code}\n\n📋 Скопируйте код и отправьте пользователю!`;
-    
-    if (tg.showPopup) {
-        tg.showPopup({
-            title: '🎁 Предустановленный код',
-            message: message,
-            buttons: [
-                {
-                    type: 'copy',
-                    text: '📋 Копировать код'
-                },
-                {
-                    type: 'ok',
-                    text: 'OK'
-                }
-            ]
-        }, (buttonId) => {
-            if (buttonId === 'copy') {
-                navigator.clipboard.writeText(availableCode.code);
-            }
-        });
-    } else {
-        alert(message);
-    }
-    
-    console.log(`✅ Predefined code ${availableCode.code} given to user ${targetUserId}`);
-};
 
-// Функция показа статистики кодов
-window.adminShowCodesStatistics = function() {
-    const stats = getCodesStatistics();
-    let message = '📊 СТАТИСТИКА КОДОВ:\n\n';
-    
-    for (const boostType in stats) {
-        const stat = stats[boostType];
-        message += `${boostType}: ${stat.used}/${stat.total} использовано (${stat.available} свободно)\n`;
-    }
-    
-    alert(message);
-    console.log('📊 Codes statistics shown');
-};
 
 // Обработчик данных от бота
 function initBotDataHandler() {
@@ -6753,6 +6699,63 @@ window.debugUserPurchases = function(userId = null) {
 
 // === СИСТЕМА ПРЕДУСТАНОВЛЕННЫХ КОДОВ ===
 
+// Глобальные функции для админ-панели
+window.adminGivePredefinedCode = function(boostType) {
+    console.log('🔧 adminGivePredefinedCode called with:', boostType);
+    const targetUserId = getTargetUserId();
+    console.log('🔧 targetUserId:', targetUserId);
+    if (!targetUserId) return;
+    
+    // Получаем свободный код
+    const availableCode = getAvailableCode(boostType);
+    
+    if (!availableCode) {
+        alert(`❌ Нет свободных кодов для буста ${boostType}`);
+        return;
+    }
+    
+    // Показываем код админу
+    const message = `🎁 ПРЕДУСТАНОВЛЕННЫЙ КОД\n\n🚀 Буст: ${boostType}\n👤 Пользователь: ${targetUserId}\n🔑 Код: ${availableCode.code}\n\n📋 Скопируйте код и отправьте пользователю!`;
+    
+    if (tg.showPopup) {
+        tg.showPopup({
+            title: '🎁 Предустановленный код',
+            message: message,
+            buttons: [
+                {
+                    type: 'copy',
+                    text: '📋 Копировать код'
+                },
+                {
+                    type: 'ok',
+                    text: 'OK'
+                }
+            ]
+        }, (buttonId) => {
+            if (buttonId === 'copy') {
+                navigator.clipboard.writeText(availableCode.code);
+            }
+        });
+    } else {
+        alert(message);
+    }
+    
+    console.log(`✅ Predefined code ${availableCode.code} given to user ${targetUserId}`);
+};
+
+window.adminShowCodesStatistics = function() {
+    const stats = getCodesStatistics();
+    let message = '📊 СТАТИСТИКА КОДОВ:\n\n';
+    
+    for (const boostType in stats) {
+        const stat = stats[boostType];
+        message += `${boostType}: ${stat.used}/${stat.total} использовано (${stat.available} свободно)\n`;
+    }
+    
+    alert(message);
+    console.log('📊 Codes statistics shown');
+};
+
 // Предустановленные коды для каждого буста
 const PREDEFINED_CODES = {
     '3x': [
@@ -6801,8 +6804,12 @@ const PREDEFINED_CODES = {
 
 // Функция получения свободного кода для буста
 function getAvailableCode(boostType) {
+    console.log('🔧 getAvailableCode called with:', boostType);
     const codes = PREDEFINED_CODES[boostType] || [];
-    return codes.find(code => !code.used);
+    console.log('🔧 Available codes for', boostType, ':', codes);
+    const availableCode = codes.find(code => !code.used);
+    console.log('🔧 Found available code:', availableCode);
+    return availableCode;
 }
 
 // Функция пометки кода как использованного
