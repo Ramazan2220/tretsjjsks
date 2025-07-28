@@ -3893,8 +3893,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Админ-панель доступна через секретный вход (5 кликов по заголовку)
         
-        // Инициализируем проверку глобальных бустов
-        checkGlobalBoosts();
+        // Инициализируем проверку бустов из URL
+        checkBoostFromURL();
         
         // Проверяем URL параметры для активации буста
         checkURLForBoost();
@@ -4615,116 +4615,94 @@ window.forcePendingCheck = function() {
          });
  };
 
-// === ОТПРАВКА БУСТОВ ЧЕРЕЗ TELEGRAM BOT ===
+// === ПРОСТОЕ РЕШЕНИЕ: ЧЕРЕЗ URL ПАРАМЕТРЫ ===
 
-// Сохранение буста в глобальное облачное хранилище
-function saveBoostToGlobalStorage(userId, boostData) {
-    if (!tg.CloudStorage) {
-        console.error('❌ Telegram CloudStorage not available');
-        return;
-    }
-    
+// Сохранение буста в localStorage админа
+function saveBoostToLocalStorage(userId, boostData) {
     try {
-        // Сохраняем в глобальный список всех бустов
-        tg.CloudStorage.getItem('global_boosts', (error, result) => {
-            if (error) {
-                console.error('❌ Error reading global boosts:', error);
-                return;
-            }
-            
-            let globalBoosts = {};
-            if (result) {
-                try {
-                    globalBoosts = JSON.parse(result);
-                } catch (e) {
-                    globalBoosts = {};
-                }
-            }
-            
-            // Добавляем новый буст
-            globalBoosts[userId] = {
-                ...boostData,
-                grantedBy: window.gamesManager.getUserId(),
-                grantedAt: Date.now()
-            };
-            
-            // Сохраняем обратно
-            tg.CloudStorage.setItem('global_boosts', JSON.stringify(globalBoosts), (error) => {
-                if (error) {
-                    console.error('❌ Error saving global boost:', error);
-                } else {
-                    console.log(`✅ Boost saved to global storage for user ${userId}`);
-                }
-            });
-        });
+        // Получаем все бусты админа
+        const adminBoosts = JSON.parse(localStorage.getItem('adminBoosts') || '{}');
+        
+        // Добавляем новый буст
+        adminBoosts[userId] = {
+            ...boostData,
+            grantedBy: window.gamesManager.getUserId(),
+            grantedAt: Date.now()
+        };
+        
+        // Сохраняем обратно
+        localStorage.setItem('adminBoosts', JSON.stringify(adminBoosts));
+        
+        console.log(`✅ Boost saved to admin localStorage for user ${userId}`);
+        
+        // Показываем ссылку для активации
+        const boostUrl = `${window.location.origin}${window.location.pathname}?boost=${encodeURIComponent(JSON.stringify(boostData))}&user=${userId}`;
+        
+        alert(`✅ Буст ${boostData.productName} выдан пользователю ${userId}\n\n🔗 Ссылка для активации:\n${boostUrl}\n\n📋 Скопируйте и отправьте пользователю!`);
         
     } catch (error) {
-        console.error('❌ Failed to save boost to global storage:', error);
+        console.error('❌ Failed to save boost:', error);
+        alert('❌ Ошибка сохранения буста');
     }
 }
 
-// Проверка бустов из глобального облачного хранилища
-function checkGlobalBoosts() {
-    if (!tg.CloudStorage) {
-        console.error('❌ Telegram CloudStorage not available');
-        return;
-    }
-    
-    console.log('🔍 Checking global boosts...');
-    
-    tg.CloudStorage.getItem('global_boosts', (error, result) => {
-        if (error) {
-            console.error('❌ Error reading global boosts:', error);
-            return;
-        }
+// Проверка буста из URL при загрузке
+function checkBoostFromURL() {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const boostParam = urlParams.get('boost');
+        const userParam = urlParams.get('user');
         
-        if (result) {
-            try {
-                const globalBoosts = JSON.parse(result);
-                const currentUserId = window.gamesManager.getUserId();
-                
-                // Проверяем есть ли буст для текущего пользователя
-                if (globalBoosts[currentUserId]) {
-                    const boostData = globalBoosts[currentUserId];
+        if (boostParam && userParam) {
+            console.log('🔗 Found boost in URL');
+            
+            const boostData = JSON.parse(decodeURIComponent(boostParam));
+            const targetUserId = userParam;
+            const currentUserId = window.gamesManager.getUserId();
+            
+            // Проверяем что буст для текущего пользователя
+            if (targetUserId === currentUserId.toString()) {
+                // Проверяем что буст еще активен
+                if (boostData.endTime > Date.now()) {
+                    console.log('🎉 Activating boost from URL:', boostData);
                     
-                    // Проверяем что буст еще активен
-                    if (boostData.endTime > Date.now()) {
-                        console.log('🎉 Found active boost in global storage:', boostData);
-                        
-                        // Активируем буст
-                        window.gamesManager.setUserBoost(currentUserId, boostData);
-                        localStorage.setItem('activeBoost', JSON.stringify(boostData));
-                        
-                        // Обновляем интерфейс
-                        updateAllSpeedDisplays();
-                        if (window.scannerEngine) {
-                            window.scannerEngine.updateSpeedDisplay();
-                            window.scannerEngine.updateScanningSpeed();
-                        }
-                        
-                        // Показываем уведомление
-                        if (window.terminalManager) {
-                            window.terminalManager.addLine(`🎉 Boost activated from admin: ${boostData.productName}`, 'SUCCESS');
-                        }
-                        
-                        console.log(`✅ Boost activated from global storage for user ${currentUserId}`);
-                        
-                        // Удаляем буст из глобального хранилища (уже активирован)
-                        delete globalBoosts[currentUserId];
-                        tg.CloudStorage.setItem('global_boosts', JSON.stringify(globalBoosts));
-                        
-                    } else {
-                        console.log('❌ Boost in global storage has expired');
-                        // Удаляем истекший буст
-                        delete globalBoosts[currentUserId];
-                        tg.CloudStorage.setItem('global_boosts', JSON.stringify(globalBoosts));
+                    // Активируем буст
+                    window.gamesManager.setUserBoost(currentUserId, boostData);
+                    localStorage.setItem('activeBoost', JSON.stringify(boostData));
+                    
+                    // Обновляем интерфейс
+                    updateAllSpeedDisplays();
+                    if (window.scannerEngine) {
+                        window.scannerEngine.updateSpeedDisplay();
+                        window.scannerEngine.updateScanningSpeed();
                     }
+                    
+                    // Показываем уведомление
+                    if (window.terminalManager) {
+                        window.terminalManager.addLine(`🎉 Boost activated from admin: ${boostData.productName}`, 'SUCCESS');
+                    }
+                    
+                    // Очищаем URL
+                    const cleanURL = window.location.href.split('?')[0];
+                    window.history.replaceState({}, document.title, cleanURL);
+                    
+                    console.log(`✅ Boost activated from URL for user ${currentUserId}`);
+                    
+                    // Показываем уведомление пользователю
+                    alert(`🎉 Буст ${boostData.productName} успешно активирован!\n⚡ Мультипликатор: ${boostData.multiplier}x\n⏰ Длительность: ${Math.round((boostData.endTime - Date.now()) / 60000)} минут`);
+                    
+                } else {
+                    console.log('❌ Boost from URL has expired');
+                    alert('❌ Буст истёк');
                 }
-            } catch (e) {
-                console.error('❌ Error processing global boosts:', e);
+            } else {
+                console.log('❌ Boost is not for current user');
+                alert('❌ Этот буст не для вас');
             }
         }
-    });
+    } catch (error) {
+        console.error('❌ Error processing URL boost:', error);
+    }
 }
 
 // Проверка URL параметров для активации буста (оставляем для совместимости)
@@ -5697,10 +5675,10 @@ window.adminGiveBoost = function(boostType) {
     
     console.log(`✅ Admin boost granted: ${boostType} to user ${targetUserId} by admin ${currentUserId}`);
     
-    // НОВЫЙ ПОДХОД: Сохраняем буст в глобальное облачное хранилище
-    saveBoostToGlobalStorage(targetUserId, boostData);
+    // НОВЫЙ ПОДХОД: Сохраняем буст в localStorage и показываем ссылку
+    saveBoostToLocalStorage(targetUserId, boostData);
     
-    alert(`✅ Буст ${boostType} выдан пользователю ${targetUserId}\n☁️ Сохранено в облачное хранилище`);
+    // Убираем дублирующий alert, так как он уже есть в saveBoostToLocalStorage
     
     return boostData;
 };
