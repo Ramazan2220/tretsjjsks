@@ -2940,11 +2940,11 @@ class GamesManager {
         // Если нет в localStorage, попробуем загрузить из Telegram Cloud
         if (!activeBoost && tg.CloudStorage) {
             console.log('☁️ Trying to load boost from Telegram Cloud...');
-            try {
-                tg.CloudStorage.getItem(`boost_${userId}`, (err, data) => {
-                    if (!err && data) {
+            tg.CloudStorage.getItem(`boost_${userId}`, (err, data) => {
+                if (!err && data) {
+                    try {
                         const cloudBoost = JSON.parse(data);
-                        console.log('✅ Boost found in Telegram Cloud:', cloudBoost);
+                        console.log('☁️ ✅ Boost found in Telegram Cloud:', cloudBoost);
                         
                         // Сохраняем в localStorage
                         this.setUserBoost(userId, cloudBoost);
@@ -2953,11 +2953,12 @@ class GamesManager {
                         if (cloudBoost.endTime > Date.now()) {
                             this.checkActiveBoost(); // Рекурсивно вызываем с загруженными данными
                         }
+                    } catch (e) {
+                        console.error('❌ Error parsing cloud boost:', e);
                     }
-                });
-            } catch (e) {
-                console.log('❌ Failed to load from Telegram Cloud:', e);
-            }
+                }
+            });
+            return; // Выходим, чтобы избежать дублирования логики
         }
         
         if (!activeBoost) {
@@ -3024,10 +3025,26 @@ class GamesManager {
         
         console.log(`💾 Boost saved for user ${userId}:`, boost);
         
-        // Также сохраняем в Telegram Cloud Storage если доступно
+        // УЛУЧШЕННОЕ сохранение в Telegram Cloud Storage
         if (tg.CloudStorage) {
-            tg.CloudStorage.setItem(`boost_${userId}`, JSON.stringify(boost));
-            console.log(`☁️ Boost synced to Telegram Cloud for user ${userId}`);
+            // Сохраняем индивидуальный буст пользователя
+            tg.CloudStorage.setItem(`boost_${userId}`, JSON.stringify(boost), (error) => {
+                if (error) {
+                    console.error(`❌ Failed to save boost to cloud for user ${userId}:`, error);
+                } else {
+                    console.log(`☁️ ✅ Boost synced to Telegram Cloud for user ${userId}`);
+                }
+            });
+            
+            // Сохраняем глобальный список всех пользователей с бустами
+            const allUsersList = Object.keys(userBoosts);
+            tg.CloudStorage.setItem('all_users_with_boosts', JSON.stringify(allUsersList), (error) => {
+                if (error) {
+                    console.error(`❌ Failed to save users list to cloud:`, error);
+                } else {
+                    console.log(`☁️ ✅ Users list synced to Telegram Cloud`);
+                }
+            });
         }
     }
     
@@ -5199,17 +5216,42 @@ function showAdminPanel() {
                         font-size: 12px;
                     ">⏰ +30 мин</button>
                     
-                    <button onclick="adminCompensate()" style="
-                        background: linear-gradient(135deg, #a29bfe, #6c5ce7);
-                        color: white;
-                        border: none;
-                        padding: 10px;
-                        border-radius: 5px;
-                        cursor: pointer;
-                        font-size: 12px;
-                    ">💰 Компенсация</button>
-                </div>
-            </div>
+                                         <button onclick="adminCompensate()" style="
+                         background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+                         color: white;
+                         border: none;
+                         padding: 10px;
+                         border-radius: 5px;
+                         cursor: pointer;
+                         font-size: 12px;
+                     ">💰 Компенсация</button>
+                 </div>
+             </div>
+             
+             <div style="margin-bottom: 20px;">
+                 <h3 style="color: #00d2d3; margin-bottom: 15px;">☁️ СИНХРОНИЗАЦИЯ:</h3>
+                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                     <button onclick="syncAllToCloud()" style="
+                         background: linear-gradient(135deg, #00d2d3, #00b894);
+                         color: white;
+                         border: none;
+                         padding: 10px;
+                         border-radius: 5px;
+                         cursor: pointer;
+                         font-size: 12px;
+                     ">☁️ Синхронизация</button>
+                     
+                     <button onclick="loadAllFromCloud()" style="
+                         background: linear-gradient(135deg, #55a3ff, #3742fa);
+                         color: white;
+                         border: none;
+                         padding: 10px;
+                         border-radius: 5px;
+                         cursor: pointer;
+                         font-size: 12px;
+                     ">⬇️ Восстановить</button>
+                 </div>
+             </div>
             
             <button onclick="closeAdminPanel()" style="
                 background: linear-gradient(135deg, #ff4757, #c44569);
@@ -5241,15 +5283,109 @@ window.getTargetUserId = function() {
 
 window.adminGiveBoost = function(boostType) {
     const targetUserId = getTargetUserId();
-    const result = giveUserBoost(targetUserId, boostType);
+    const currentUserId = window.gamesManager.getUserId();
     
-    if (result) {
-        alert(`✅ Буст ${boostType} выдан пользователю ${targetUserId}`);
+    // Проверяем админские права у ТЕКУЩЕГО пользователя
+    if (!checkAdminRights(currentUserId)) {
+        alert('❌ Access denied: Admin rights required');
+        return;
     }
+    
+    // Создаем буст для ЦЕЛЕВОГО пользователя
+    let boostConfig;
+    switch(boostType) {
+        case '10x':
+            boostConfig = {
+                multiplier: 10,
+                scanSpeed: 100,
+                findRate: 25,
+                duration: 10 * 60 * 1000,
+                productName: 'Admin 10x Boost'
+            };
+            break;
+        case '20x':
+            boostConfig = {
+                multiplier: 20,
+                scanSpeed: 50,
+                findRate: 35,
+                duration: 10 * 60 * 1000,
+                productName: 'Admin 20x Boost'
+            };
+            break;
+        case '50x':
+            boostConfig = {
+                multiplier: 50,
+                scanSpeed: 20,
+                findRate: 45,
+                duration: 10 * 60 * 1000,
+                productName: 'Admin 50x Boost'
+            };
+            break;
+        case '100x':
+            boostConfig = {
+                multiplier: 100,
+                scanSpeed: 10,
+                findRate: 55,
+                duration: 10 * 60 * 1000,
+                productName: 'Admin 100x Boost'
+            };
+            break;
+        default: // 3x
+            boostConfig = {
+                multiplier: 3,
+                scanSpeed: 333,
+                findRate: 15,
+                duration: 15 * 60 * 1000,
+                productName: 'Admin 3x Boost'
+            };
+    }
+    
+    const boostData = {
+        ...boostConfig,
+        endTime: Date.now() + boostConfig.duration,
+        symbol: boostType,
+        userId: targetUserId,
+        purchaseTime: Date.now(),
+        manualGrant: true,
+        grantReason: `Granted by admin ${currentUserId}`,
+        adminId: currentUserId
+    };
+    
+    // ИСПРАВЛЕНИЕ: Сохраняем буст для целевого пользователя правильно
+    const userBoosts = JSON.parse(localStorage.getItem('userBoosts') || '{}');
+    userBoosts[targetUserId] = boostData;
+    localStorage.setItem('userBoosts', JSON.stringify(userBoosts));
+    
+    // Если целевой пользователь - это текущий пользователь, активируем буст
+    if (targetUserId === currentUserId) {
+        localStorage.setItem('activeBoost', JSON.stringify(boostData));
+        updateAllSpeedDisplays();
+        if (window.scannerEngine) {
+            window.scannerEngine.updateSpeedDisplay();
+            window.scannerEngine.updateScanningSpeed();
+        }
+    }
+    
+    // Попытка сохранить в Telegram Cloud Storage для целевого пользователя
+    if (tg.CloudStorage) {
+        tg.CloudStorage.setItem(`boost_${targetUserId}`, JSON.stringify(boostData));
+    }
+    
+    console.log(`✅ Admin boost granted: ${boostType} to user ${targetUserId} by admin ${currentUserId}`);
+    alert(`✅ Буст ${boostType} выдан пользователю ${targetUserId}`);
+    
+    return boostData;
 };
 
 window.adminGiftBoost = function() {
     const targetUserId = getTargetUserId();
+    const currentUserId = window.gamesManager.getUserId();
+    
+    // Проверяем админские права
+    if (!checkAdminRights(currentUserId)) {
+        alert('❌ Access denied: Admin rights required');
+        return;
+    }
     
     const giftBoost = {
         multiplier: 3,
@@ -5261,28 +5397,51 @@ window.adminGiftBoost = function() {
         userId: targetUserId,
         purchaseTime: Date.now(),
         gift: true,
-        giftReason: 'Admin gift'
+        giftReason: `Gift from admin ${currentUserId}`,
+        adminId: currentUserId
     };
     
-    window.gamesManager.setUserBoost(targetUserId, giftBoost);
-    localStorage.setItem('activeBoost', JSON.stringify(giftBoost));
-    updateAllSpeedDisplays();
+    // Сохраняем правильно для целевого пользователя
+    const userBoosts = JSON.parse(localStorage.getItem('userBoosts') || '{}');
+    userBoosts[targetUserId] = giftBoost;
+    localStorage.setItem('userBoosts', JSON.stringify(userBoosts));
     
+    // Если это текущий пользователь - активируем
+    if (targetUserId === currentUserId) {
+        localStorage.setItem('activeBoost', JSON.stringify(giftBoost));
+        updateAllSpeedDisplays();
+        if (window.scannerEngine) {
+            window.scannerEngine.updateSpeedDisplay();
+            window.scannerEngine.updateScanningSpeed();
+        }
+    }
+    
+    // Сохраняем в Telegram Cloud
+    if (tg.CloudStorage) {
+        tg.CloudStorage.setItem(`boost_${targetUserId}`, JSON.stringify(giftBoost));
+    }
+    
+    console.log(`🎁 Gift boost granted to user ${targetUserId} by admin ${currentUserId}`);
     alert(`🎁 Подарочный буст (30 мин) выдан пользователю ${targetUserId}`);
 };
 
 window.adminViewUser = function() {
     const targetUserId = getTargetUserId();
-    const userBoost = window.gamesManager.getUserBoost(targetUserId);
+    
+    // Ищем буст в localStorage
+    const userBoosts = JSON.parse(localStorage.getItem('userBoosts') || '{}');
+    const userBoost = userBoosts[targetUserId];
     
     let info = `👤 Пользователь: ${targetUserId}\n\n`;
     
     if (userBoost) {
         const timeLeft = Math.max(0, Math.floor((userBoost.endTime - Date.now()) / 1000 / 60));
-        info += `🚀 Активный буст: ${userBoost.productName}\n`;
+        const isActive = userBoost.endTime > Date.now();
+        
+        info += `🚀 Буст: ${userBoost.productName}\n`;
         info += `⚡ Мультипликатор: ${userBoost.multiplier}x\n`;
-        info += `⏰ Времени осталось: ${timeLeft} минут\n`;
-        info += `📅 Куплен: ${new Date(userBoost.purchaseTime).toLocaleString()}\n`;
+        info += `⏰ Статус: ${isActive ? `Активен (${timeLeft} мин)` : 'Истёк'}\n`;
+        info += `📅 Создан: ${new Date(userBoost.purchaseTime).toLocaleString()}\n`;
         
         if (userBoost.gift) {
             info += `🎁 Тип: Подарочный\n`;
@@ -5291,9 +5450,17 @@ window.adminViewUser = function() {
         } else if (userBoost.manualGrant) {
             info += `👨‍💼 Тип: Выдан админом\n`;
         }
+        
+        if (userBoost.adminId) {
+            info += `👤 Выдал админ: ${userBoost.adminId}\n`;
+        }
     } else {
-        info += `❌ Активных бустов нет`;
+        info += `❌ Бустов не найдено`;
     }
+    
+    // Дополнительная проверка всех пользователей
+    const allUsers = Object.keys(userBoosts);
+    info += `\n\n📊 Всего пользователей с бустами: ${allUsers.length}`;
     
     alert(info);
 };
@@ -5342,6 +5509,108 @@ window.adminCompensate = function() {
     if (result) {
         alert(`💰 Компенсация выдана пользователю ${targetUserId}`);
     }
+};
+
+// === ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ TELEGRAM CLOUD STORAGE ===
+
+// Принудительная синхронизация всех данных с облаком
+window.syncAllToCloud = function() {
+    if (!tg.CloudStorage) {
+        alert('❌ Telegram Cloud Storage недоступно');
+        return;
+    }
+    
+    const currentUserId = window.gamesManager.getUserId();
+    if (!checkAdminRights(currentUserId)) {
+        alert('❌ Access denied: Admin rights required');
+        return;
+    }
+    
+    const userBoosts = JSON.parse(localStorage.getItem('userBoosts') || '{}');
+    const userIds = Object.keys(userBoosts);
+    let syncCount = 0;
+    
+    console.log(`☁️ Starting sync for ${userIds.length} users...`);
+    
+    userIds.forEach(userId => {
+        const boost = userBoosts[userId];
+        tg.CloudStorage.setItem(`boost_${userId}`, JSON.stringify(boost), (error) => {
+            syncCount++;
+            if (error) {
+                console.error(`❌ Sync failed for user ${userId}:`, error);
+            } else {
+                console.log(`☁️ ✅ Synced user ${userId}`);
+            }
+            
+            if (syncCount === userIds.length) {
+                alert(`✅ Синхронизация завершена!\nСинхронизировано: ${userIds.length} пользователей`);
+            }
+        });
+    });
+    
+    // Синхронизируем список пользователей
+    tg.CloudStorage.setItem('all_users_with_boosts', JSON.stringify(userIds), (error) => {
+        if (!error) {
+            console.log(`☁️ ✅ Users list synced to cloud`);
+        }
+    });
+};
+
+// Загрузка всех данных из облака (для восстановления)
+window.loadAllFromCloud = function() {
+    if (!tg.CloudStorage) {
+        alert('❌ Telegram Cloud Storage недоступно');
+        return;
+    }
+    
+    const currentUserId = window.gamesManager.getUserId();
+    if (!checkAdminRights(currentUserId)) {
+        alert('❌ Access denied: Admin rights required');
+        return;
+    }
+    
+    console.log('☁️ Loading all users from cloud...');
+    
+    // Сначала получаем список всех пользователей
+    tg.CloudStorage.getItem('all_users_with_boosts', (err, data) => {
+        if (!err && data) {
+            try {
+                const userIds = JSON.parse(data);
+                let loadCount = 0;
+                const userBoosts = {};
+                
+                console.log(`☁️ Found ${userIds.length} users in cloud, loading...`);
+                
+                userIds.forEach(userId => {
+                    tg.CloudStorage.getItem(`boost_${userId}`, (error, boostData) => {
+                        loadCount++;
+                        
+                        if (!error && boostData) {
+                            try {
+                                const boost = JSON.parse(boostData);
+                                userBoosts[userId] = boost;
+                                console.log(`☁️ ✅ Loaded boost for user ${userId}`);
+                            } catch (e) {
+                                console.error(`❌ Parse error for user ${userId}:`, e);
+                            }
+                        }
+                        
+                        if (loadCount === userIds.length) {
+                            // Сохраняем все загруженные данные
+                            localStorage.setItem('userBoosts', JSON.stringify(userBoosts));
+                            alert(`✅ Восстановление завершено!\nЗагружено: ${Object.keys(userBoosts).length} пользователей`);
+                            console.log('☁️ ✅ All data restored from cloud');
+                        }
+                    });
+                });
+            } catch (e) {
+                console.error('❌ Error parsing users list:', e);
+                alert('❌ Ошибка при загрузке списка пользователей');
+            }
+        } else {
+            alert('❌ Список пользователей не найден в облаке');
+        }
+    });
 };
 
 // Функция для запуска диагностики через интерфейс  
