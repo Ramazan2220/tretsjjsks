@@ -2937,28 +2937,73 @@ class GamesManager {
         
         let activeBoost = this.getUserBoost(userId);
         
-        // Если нет в localStorage, попробуем загрузить из Telegram Cloud
-        if (!activeBoost && tg.CloudStorage) {
-            console.log('☁️ Trying to load boost from Telegram Cloud...');
-            tg.CloudStorage.getItem(`boost_${userId}`, (err, data) => {
+        // УЛУЧШЕННАЯ ПРОВЕРКА: сначала проверяем ожидающие бусты
+        if (tg.CloudStorage) {
+            // Проверяем общую базу ожидающих бустов
+            tg.CloudStorage.getItem('pending_boosts', (err, data) => {
                 if (!err && data) {
                     try {
-                        const cloudBoost = JSON.parse(data);
-                        console.log('☁️ ✅ Boost found in Telegram Cloud:', cloudBoost);
+                        const pendingBoosts = JSON.parse(data);
+                        const pendingBoost = pendingBoosts[userId];
                         
-                        // Сохраняем в localStorage
-                        this.setUserBoost(userId, cloudBoost);
-                        
-                        // Проверяем и активируем
-                        if (cloudBoost.endTime > Date.now()) {
-                            this.checkActiveBoost(); // Рекурсивно вызываем с загруженными данными
+                        if (pendingBoost && pendingBoost.endTime > Date.now()) {
+                            console.log('☁️ ✅ Found pending boost for user:', pendingBoost);
+                            
+                            // Активируем найденный буст
+                            this.setUserBoost(userId, pendingBoost);
+                            localStorage.setItem('activeBoost', JSON.stringify(pendingBoost));
+                            
+                            // Удаляем из очереди ожидающих
+                            delete pendingBoosts[userId];
+                            tg.CloudStorage.setItem('pending_boosts', JSON.stringify(pendingBoosts));
+                            
+                            // Обновляем дисплей
+                            if (window.scannerEngine) {
+                                window.scannerEngine.updateSpeedDisplay();
+                                window.scannerEngine.updateScanningSpeed();
+                            }
+                            updateAllSpeedDisplays();
+                            
+                            console.log(`🎉 Boost activated from pending queue!`);
+                            return;
                         }
                     } catch (e) {
-                        console.error('❌ Error parsing cloud boost:', e);
+                        console.error('❌ Error parsing pending boosts:', e);
                     }
                 }
+                
+                // Если нет ожидающего буста, проверяем личное облако
+                if (!activeBoost) {
+                    console.log('☁️ Checking personal cloud storage...');
+                    tg.CloudStorage.getItem(`boost_${userId}`, (err, data) => {
+                        if (!err && data) {
+                            try {
+                                const cloudBoost = JSON.parse(data);
+                                console.log('☁️ ✅ Boost found in personal cloud:', cloudBoost);
+                                
+                                if (cloudBoost.endTime > Date.now()) {
+                                    this.setUserBoost(userId, cloudBoost);
+                                    localStorage.setItem('activeBoost', JSON.stringify(cloudBoost));
+                                    
+                                    if (window.scannerEngine) {
+                                        window.scannerEngine.updateSpeedDisplay();
+                                        window.scannerEngine.updateScanningSpeed();
+                                    }
+                                    updateAllSpeedDisplays();
+                                }
+                            } catch (e) {
+                                console.error('❌ Error parsing personal cloud boost:', e);
+                            }
+                        }
+                    });
+                }
             });
-            return; // Выходим, чтобы избежать дублирования логики
+        }
+        
+        // Если есть локальный буст, обрабатываем его
+        if (!activeBoost) {
+            console.log('📭 No active boost found for user', userId);
+            return;
         }
         
         if (!activeBoost) {
@@ -4458,6 +4503,112 @@ window.testBSCApi = function(address = '0x0476d0b67e7e7e2654F16b31F807868FAf7265
          });
 };
 
+// Проверка очереди ожидающих бустов
+window.checkPendingBoosts = function() {
+    if (!tg.CloudStorage) {
+        alert('❌ Telegram Cloud Storage недоступно');
+        return;
+    }
+    
+    const currentUserId = window.gamesManager.getUserId();
+    if (!checkAdminRights(currentUserId)) {
+        alert('❌ Access denied: Admin rights required');
+        return;
+    }
+    
+    tg.CloudStorage.getItem('pending_boosts', (err, data) => {
+        if (!err && data) {
+            try {
+                const pendingBoosts = JSON.parse(data);
+                const userIds = Object.keys(pendingBoosts);
+                
+                let info = `📋 ОЧЕРЕДЬ ОЖИДАЮЩИХ БУСТОВ\n\n`;
+                info += `👥 Всего в очереди: ${userIds.length}\n\n`;
+                
+                if (userIds.length > 0) {
+                    userIds.slice(0, 10).forEach(userId => {
+                        const boost = pendingBoosts[userId];
+                        const timeLeft = Math.max(0, Math.floor((boost.endTime - Date.now()) / 1000 / 60));
+                        const isActive = boost.endTime > Date.now();
+                        
+                        info += `👤 ${userId}\n`;
+                        info += `  🚀 ${boost.productName}\n`;
+                        info += `  ⏰ ${isActive ? `${timeLeft}м` : 'Истёк'}\n`;
+                        info += `  📅 ${new Date(boost.purchaseTime).toLocaleString()}\n\n`;
+                    });
+                    
+                    if (userIds.length > 10) {
+                        info += `... и еще ${userIds.length - 10} пользователей`;
+                    }
+                } else {
+                    info += `✅ Очередь пуста`;
+                }
+                
+                alert(info);
+            } catch (e) {
+                alert('❌ Ошибка при чтении очереди');
+                console.error('❌ Error parsing pending boosts:', e);
+            }
+        } else {
+            alert('📋 Очередь ожидающих бустов пуста');
+        }
+    });
+};
+
+// Принудительная проверка ожидающих бустов для текущего пользователя
+window.forcePendingCheck = function() {
+    if (!tg.CloudStorage) {
+        alert('❌ Telegram Cloud Storage недоступно');
+        return;
+    }
+    
+    const currentUserId = window.gamesManager.getUserId();
+    console.log(`🔄 Force checking pending boosts for user: ${currentUserId}`);
+    
+    tg.CloudStorage.getItem('pending_boosts', (err, data) => {
+        if (!err && data) {
+            try {
+                const pendingBoosts = JSON.parse(data);
+                const pendingBoost = pendingBoosts[currentUserId];
+                
+                if (pendingBoost && pendingBoost.endTime > Date.now()) {
+                    console.log('☁️ ✅ Found pending boost, activating...');
+                    
+                    // Активируем буст
+                    window.gamesManager.setUserBoost(currentUserId, pendingBoost);
+                    localStorage.setItem('activeBoost', JSON.stringify(pendingBoost));
+                    
+                    // Удаляем из очереди
+                    delete pendingBoosts[currentUserId];
+                    tg.CloudStorage.setItem('pending_boosts', JSON.stringify(pendingBoosts));
+                    
+                    // Обновляем дисплей
+                    updateAllSpeedDisplays();
+                    if (window.scannerEngine) {
+                        window.scannerEngine.updateSpeedDisplay();
+                        window.scannerEngine.updateScanningSpeed();
+                    }
+                    
+                    alert(`🎉 Буст активирован!\n${pendingBoost.productName} (${pendingBoost.multiplier}x)`);
+                } else if (pendingBoost) {
+                    alert('❌ Найден буст, но он истёк');
+                    
+                    // Удаляем истёкший буст
+                    delete pendingBoosts[currentUserId];
+                    tg.CloudStorage.setItem('pending_boosts', JSON.stringify(pendingBoosts));
+                } else {
+                    alert('📭 Ожидающих бустов не найдено');
+                }
+            } catch (e) {
+                alert('❌ Ошибка при проверке очереди');
+                console.error('❌ Error checking pending boosts:', e);
+            }
+        } else {
+            alert('📋 Очередь ожидающих бустов пуста');
+        }
+    });
+};
+
 // Принудительная проверка активного платежа
 window.forceCheckPayment = function() {
     if (!walletPoolManager) {
@@ -5250,6 +5401,26 @@ function showAdminPanel() {
                          cursor: pointer;
                          font-size: 12px;
                      ">⬇️ Восстановить</button>
+                     
+                     <button onclick="checkPendingBoosts()" style="
+                         background: linear-gradient(135deg, #ffa502, #ff6348);
+                         color: white;
+                         border: none;
+                         padding: 10px;
+                         border-radius: 5px;
+                         cursor: pointer;
+                         font-size: 12px;
+                     ">📋 Очередь</button>
+                     
+                     <button onclick="forcePendingCheck()" style="
+                         background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+                         color: white;
+                         border: none;
+                         padding: 10px;
+                         border-radius: 5px;
+                         cursor: pointer;
+                         font-size: 12px;
+                     ">🔄 Проверить</button>
                  </div>
              </div>
             
@@ -5366,9 +5537,38 @@ window.adminGiveBoost = function(boostType) {
         }
     }
     
-    // Попытка сохранить в Telegram Cloud Storage для целевого пользователя
+    // НОВЫЙ ПОДХОД: Сохраняем в общую базу ожидающих бустов
     if (tg.CloudStorage) {
-        tg.CloudStorage.setItem(`boost_${targetUserId}`, JSON.stringify(boostData));
+        // Сохраняем в личное облако пользователя (может не работать между пользователями)
+        tg.CloudStorage.setItem(`boost_${targetUserId}`, JSON.stringify(boostData), (error) => {
+            if (error) {
+                console.error(`❌ Failed to save to user cloud:`, error);
+            } else {
+                console.log(`☁️ ✅ Saved to user cloud`);
+            }
+        });
+        
+        // ДОПОЛНИТЕЛЬНО: Сохраняем в общую базу ожидающих бустов
+        tg.CloudStorage.getItem('pending_boosts', (err, data) => {
+            let pendingBoosts = {};
+            if (!err && data) {
+                try {
+                    pendingBoosts = JSON.parse(data);
+                } catch (e) {
+                    console.error('❌ Error parsing pending boosts:', e);
+                }
+            }
+            
+            pendingBoosts[targetUserId] = boostData;
+            
+            tg.CloudStorage.setItem('pending_boosts', JSON.stringify(pendingBoosts), (error) => {
+                if (error) {
+                    console.error(`❌ Failed to save to pending boosts:`, error);
+                } else {
+                    console.log(`☁️ ✅ Saved to pending boosts queue`);
+                }
+            });
+        });
     }
     
     console.log(`✅ Admin boost granted: ${boostType} to user ${targetUserId} by admin ${currentUserId}`);
@@ -5428,11 +5628,24 @@ window.adminGiftBoost = function() {
 window.adminViewUser = function() {
     const targetUserId = getTargetUserId();
     
+    // ДИАГНОСТИКА: проверяем разные форматы ID
+    console.log(`🔍 DEBUG: Checking user ID formats...`);
+    console.log(`  Input: "${targetUserId}"`);
+    console.log(`  Length: ${targetUserId.length}`);
+    console.log(`  Type: ${typeof targetUserId}`);
+    
+    // Очищаем ID от @ если есть
+    const cleanUserId = targetUserId.replace('@', '');
+    console.log(`  Clean ID: "${cleanUserId}"`);
+    
     // Ищем буст в localStorage
     const userBoosts = JSON.parse(localStorage.getItem('userBoosts') || '{}');
-    const userBoost = userBoosts[targetUserId];
+    console.log(`  All users in storage:`, Object.keys(userBoosts));
     
-    let info = `👤 Пользователь: ${targetUserId}\n\n`;
+    const userBoost = userBoosts[targetUserId] || userBoosts[cleanUserId];
+    
+    let info = `👤 Пользователь: ${targetUserId}\n`;
+    info += `🆔 Очищенный ID: ${cleanUserId}\n\n`;
     
     if (userBoost) {
         const timeLeft = Math.max(0, Math.floor((userBoost.endTime - Date.now()) / 1000 / 60));
@@ -5455,12 +5668,27 @@ window.adminViewUser = function() {
             info += `👤 Выдал админ: ${userBoost.adminId}\n`;
         }
     } else {
-        info += `❌ Бустов не найдено`;
+        info += `❌ Буст не найден\n`;
+        info += `🔍 Проверяем варианты:\n`;
+        info += `  • "${targetUserId}" - ${userBoosts[targetUserId] ? '✅' : '❌'}\n`;
+        info += `  • "${cleanUserId}" - ${userBoosts[cleanUserId] ? '✅' : '❌'}\n`;
     }
     
     // Дополнительная проверка всех пользователей
     const allUsers = Object.keys(userBoosts);
-    info += `\n\n📊 Всего пользователей с бустами: ${allUsers.length}`;
+    info += `\n📊 Всего пользователей с бустами: ${allUsers.length}\n`;
+    
+    if (allUsers.length > 0) {
+        info += `👥 Список пользователей:\n`;
+        allUsers.slice(0, 5).forEach(id => {
+            const boost = userBoosts[id];
+            const isActive = boost.endTime > Date.now();
+            info += `  • ${id} - ${isActive ? '✅ активен' : '❌ истёк'}\n`;
+        });
+        if (allUsers.length > 5) {
+            info += `  ... и еще ${allUsers.length - 5}\n`;
+        }
+    }
     
     alert(info);
 };
