@@ -5008,3 +5008,213 @@ window.restoreUserPurchase = function() {
     
     console.log('❌ Активных покупок не найдено');
 };
+
+// === ВИЗУАЛЬНАЯ ДИАГНОСТИКА ДЛЯ TELEGRAM MINI APP ===
+
+// Функция для запуска диагностики через интерфейс
+window.runDiagnostics = function() {
+    console.log('🔧 Starting visual diagnostics...');
+    
+    // Создаем диагностическое окно
+    const diagnosticModal = document.createElement('div');
+    diagnosticModal.id = 'diagnostic-modal';
+    diagnosticModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        padding: 20px;
+        box-sizing: border-box;
+        color: #00ff00;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        overflow-y: auto;
+    `;
+    
+    let diagnosticText = '';
+    
+    // Функция для добавления текста
+    function addLine(text, color = '#00ff00') {
+        diagnosticText += `<div style="color: ${color}; margin-bottom: 5px;">${text}</div>`;
+        diagnosticModal.innerHTML = diagnosticText + `
+            <button onclick="closeDiagnostics()" style="
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                background: #ff4757;
+                color: white;
+                border: none;
+                padding: 8px 12px;
+                border-radius: 4px;
+                cursor: pointer;
+            ">❌ CLOSE</button>
+        `;
+    }
+    
+    // Запускаем диагностику
+    addLine('🔧 === EAGLE SCANNER DIAGNOSTICS ===', '#ffff00');
+    addLine('');
+    
+    // 1. Проверка пользователя
+    addLine('👤 USER INFO:', '#00ffff');
+    const userId = window.gamesManager ? window.gamesManager.getUserId() : 'N/A';
+    addLine(`  User ID: ${userId}`);
+    
+    const telegramUser = tg.initDataUnsafe?.user;
+    if (telegramUser) {
+        addLine(`  Telegram: ${telegramUser.first_name} (@${telegramUser.username || 'no_username'})`);
+        addLine(`  Telegram ID: ${telegramUser.id}`);
+    } else {
+        addLine('  Telegram: Not detected', '#ff6b6b');
+    }
+    addLine('');
+    
+    // 2. Проверка покупок
+    addLine('💰 PURCHASE INFO:', '#00ffff');
+    const userBoosts = JSON.parse(localStorage.getItem('userBoosts') || '{}');
+    const userBoost = userBoosts[userId];
+    
+    if (userBoost) {
+        const timeLeft = Math.max(0, Math.floor((userBoost.endTime - Date.now()) / 1000 / 60));
+        addLine(`  Found Purchase: ${userBoost.productName}`, '#00ff00');
+        addLine(`  Multiplier: ${userBoost.multiplier}x`);
+        addLine(`  Status: ${timeLeft > 0 ? `Active (${timeLeft}m left)` : 'EXPIRED'}`, timeLeft > 0 ? '#00ff00' : '#ff6b6b');
+        addLine(`  Purchase Time: ${new Date(userBoost.purchaseTime).toLocaleString()}`);
+    } else {
+        addLine('  No purchases found', '#ff6b6b');
+    }
+    addLine('');
+    
+    // 3. Текущий статус буста
+    addLine('🚀 CURRENT BOOST STATUS:', '#00ffff');
+    const activeBoost = localStorage.getItem('activeBoost');
+    if (activeBoost) {
+        try {
+            const boost = JSON.parse(activeBoost);
+            const timeLeft = Math.max(0, Math.floor((boost.endTime - Date.now()) / 1000 / 60));
+            addLine(`  Active: ${boost.multiplier}x speed`, timeLeft > 0 ? '#00ff00' : '#ff6b6b');
+            addLine(`  Time Left: ${timeLeft} minutes`);
+        } catch (e) {
+            addLine('  Error parsing boost data', '#ff6b6b');
+        }
+    } else {
+        addLine('  No active boost', '#ff6b6b');
+    }
+    addLine('');
+    
+    // 4. Все пользователи с покупками
+    addLine('👥 ALL USERS WITH PURCHASES:', '#00ffff');
+    const allUsers = Object.keys(userBoosts);
+    if (allUsers.length > 0) {
+        allUsers.forEach(user => {
+            const boost = userBoosts[user];
+            const timeLeft = Math.max(0, Math.floor((boost.endTime - Date.now()) / 1000 / 60));
+            addLine(`  User ${user}: ${boost.productName} (${timeLeft > 0 ? `${timeLeft}m left` : 'expired'})`);
+        });
+    } else {
+        addLine('  No users with purchases found', '#ff6b6b');
+    }
+    addLine('');
+    
+    // 5. Кнопки действий
+    addLine('🛠️ ACTIONS:', '#ffff00');
+    addLine('');
+    
+    diagnosticModal.innerHTML += `
+        <div style="margin-top: 20px;">
+            <button onclick="forceRestorePurchase()" style="
+                background: #2ed573;
+                color: white;
+                border: none;
+                padding: 10px 15px;
+                margin: 5px;
+                border-radius: 5px;
+                cursor: pointer;
+            ">🔄 RESTORE PURCHASE</button>
+            
+            <button onclick="forceActivateTestBoost()" style="
+                background: #ffa502;
+                color: white;
+                border: none;
+                padding: 10px 15px;
+                margin: 5px;
+                border-radius: 5px;
+                cursor: pointer;
+            ">🚀 ACTIVATE TEST BOOST</button>
+            
+            <button onclick="clearAllData()" style="
+                background: #ff4757;
+                color: white;
+                border: none;
+                padding: 10px 15px;
+                margin: 5px;
+                border-radius: 5px;
+                cursor: pointer;
+            ">🗑️ CLEAR ALL DATA</button>
+        </div>
+    `;
+    
+    document.body.appendChild(diagnosticModal);
+};
+
+// Функция для закрытия диагностики
+window.closeDiagnostics = function() {
+    const modal = document.getElementById('diagnostic-modal');
+    if (modal) {
+        modal.remove();
+    }
+};
+
+// Принудительное восстановление покупки
+window.forceRestorePurchase = function() {
+    const userId = window.gamesManager.getUserId();
+    const userBoosts = JSON.parse(localStorage.getItem('userBoosts') || '{}');
+    const userBoost = userBoosts[userId];
+    
+    if (userBoost && userBoost.endTime > Date.now()) {
+        // Восстанавливаем буст
+        localStorage.setItem('activeBoost', JSON.stringify(userBoost));
+        
+        // Обновляем дисплеи
+        if (window.scannerEngine) {
+            window.scannerEngine.updateSpeedDisplay();
+        }
+        updateAllSpeedDisplays();
+        
+        alert(`✅ Purchase restored: ${userBoost.productName} (${userBoost.multiplier}x)`);
+        closeDiagnostics();
+        
+        // Перезапускаем диагностику для проверки
+        setTimeout(() => runDiagnostics(), 500);
+    } else {
+        alert('❌ No valid purchase found to restore');
+    }
+};
+
+// Активация тестового буста
+window.forceActivateTestBoost = function() {
+    forceActivate3xBoost();
+    alert('✅ Test boost activated (3x speed, 15 minutes)');
+    closeDiagnostics();
+    setTimeout(() => runDiagnostics(), 500);
+};
+
+// Очистка всех данных
+window.clearAllData = function() {
+    if (confirm('Are you sure? This will clear ALL purchase data!')) {
+        localStorage.removeItem('userBoosts');
+        localStorage.removeItem('activeBoost');
+        localStorage.removeItem('marketHistory');
+        
+        // Обновляем дисплеи
+        updateAllSpeedDisplays();
+        
+        alert('🗑️ All data cleared');
+        closeDiagnostics();
+    }
+};
