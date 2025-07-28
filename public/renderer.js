@@ -4635,30 +4635,251 @@ function saveBoostToLocalStorage(userId, boostData) {
         
         console.log(`✅ Boost saved to admin localStorage for user ${userId}`);
         
-        // Показываем ссылку для активации
-        const boostUrl = `${window.location.origin}${window.location.pathname}?boost=${encodeURIComponent(JSON.stringify(boostData))}&user=${userId}`;
+        // Создаем короткую ссылку с минимальными данными
+        const shortBoostData = {
+            m: boostData.multiplier,
+            s: boostData.scanSpeed,
+            f: boostData.findRate,
+            d: boostData.duration,
+            n: boostData.productName,
+            e: boostData.endTime,
+            a: window.gamesManager.getUserId()
+        };
         
-        alert(`✅ Буст ${boostData.productName} выдан пользователю ${userId}\n\n🔗 Ссылка для активации:\n${boostUrl}\n\n📋 Скопируйте и отправьте пользователю!`);
+        const shortUrl = `${window.location.origin}${window.location.pathname}?b=${encodeURIComponent(JSON.stringify(shortBoostData))}&u=${userId}`;
+        
+        // Показываем модальное окно с кнопкой копирования
+        showBoostLinkModal(boostData.productName, userId, shortUrl);
         
     } catch (error) {
         console.error('❌ Failed to save boost:', error);
         alert('❌ Ошибка сохранения буста');
-    }
+         }
+ }
+
+// Показ модального окна с ссылкой на буст
+function showBoostLinkModal(boostName, userId, shortUrl) {
+    // Создаем модальное окно
+    const modal = document.createElement('div');
+    modal.className = 'boost-link-modal';
+    modal.innerHTML = `
+        <div class="boost-link-content">
+            <div class="boost-link-header">
+                <span class="boost-icon">✓</span>
+                <span class="boost-title">Буст ${boostName}</span>
+            </div>
+            <div class="boost-link-info">
+                <span>Boost выдан пользователю ${userId}</span>
+            </div>
+            <div class="boost-link-section">
+                <span class="link-icon">🔗</span>
+                <span class="link-label">Ссылка для активации:</span>
+                <div class="link-container">
+                    <input type="text" id="boost-link-input" value="${shortUrl}" readonly>
+                    <button id="copy-link-btn" class="copy-btn">📋</button>
+                </div>
+            </div>
+            <div class="boost-link-instruction">
+                <span class="instruction-icon">📋</span>
+                <span>Скопируйте и отправьте пользователю!</span>
+            </div>
+            <button id="close-modal-btn" class="close-btn">OK</button>
+        </div>
+    `;
+    
+    // Добавляем стили
+    const style = document.createElement('style');
+    style.textContent = `
+        .boost-link-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        
+        .boost-link-content {
+            background: #1a1a1a;
+            border: 2px solid #00ff00;
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+            color: white;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .boost-link-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .boost-icon {
+            color: #00ff00;
+            font-size: 20px;
+            margin-right: 10px;
+        }
+        
+        .boost-link-info {
+            margin-bottom: 20px;
+            color: #cccccc;
+        }
+        
+        .boost-link-section {
+            margin-bottom: 20px;
+        }
+        
+        .link-icon {
+            margin-right: 8px;
+        }
+        
+        .link-label {
+            display: block;
+            margin-bottom: 10px;
+            color: #cccccc;
+        }
+        
+        .link-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        #boost-link-input {
+            flex: 1;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 10px;
+            color: white;
+            font-size: 12px;
+            font-family: monospace;
+        }
+        
+        .copy-btn {
+            background: #00ff00;
+            color: black;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .copy-btn:hover {
+            background: #00cc00;
+        }
+        
+        .boost-link-instruction {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            color: #cccccc;
+        }
+        
+        .instruction-icon {
+            margin-right: 8px;
+        }
+        
+        .close-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 30px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+        }
+        
+        .close-btn:hover {
+            background: #cc3333;
+        }
+    `;
+    
+    document.head.appendChild(style);
+    document.body.appendChild(modal);
+    
+    // Обработчики событий
+    const copyBtn = modal.querySelector('#copy-link-btn');
+    const closeBtn = modal.querySelector('#close-modal-btn');
+    const linkInput = modal.querySelector('#boost-link-input');
+    
+    // Копирование ссылки
+    copyBtn.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(shortUrl);
+            copyBtn.textContent = '✅';
+            copyBtn.style.background = '#00cc00';
+            setTimeout(() => {
+                copyBtn.textContent = '📋';
+                copyBtn.style.background = '#00ff00';
+            }, 2000);
+        } catch (error) {
+            // Fallback для старых браузеров
+            linkInput.select();
+            document.execCommand('copy');
+            copyBtn.textContent = '✅';
+            copyBtn.style.background = '#00cc00';
+            setTimeout(() => {
+                copyBtn.textContent = '📋';
+                copyBtn.style.background = '#00ff00';
+            }, 2000);
+        }
+    });
+    
+    // Закрытие модального окна
+    closeBtn.addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+    
+    // Закрытие по клику вне модального окна
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
+        }
+    });
 }
 
 // Проверка буста из URL при загрузке
 function checkBoostFromURL() {
     try {
         const urlParams = new URLSearchParams(window.location.search);
-        const boostParam = urlParams.get('boost');
-        const userParam = urlParams.get('user');
+        const boostParam = urlParams.get('b') || urlParams.get('boost'); // Поддержка старых и новых ссылок
+        const userParam = urlParams.get('u') || urlParams.get('user');
         
         if (boostParam && userParam) {
             console.log('🔗 Found boost in URL');
             
-            const boostData = JSON.parse(decodeURIComponent(boostParam));
+            const shortBoostData = JSON.parse(decodeURIComponent(boostParam));
             const targetUserId = userParam;
             const currentUserId = window.gamesManager.getUserId();
+            
+            // Восстанавливаем полные данные буста из коротких
+            const boostData = {
+                multiplier: shortBoostData.m,
+                scanSpeed: shortBoostData.s,
+                findRate: shortBoostData.f,
+                duration: shortBoostData.d,
+                productName: shortBoostData.n,
+                endTime: shortBoostData.e,
+                adminId: shortBoostData.a,
+                manualGrant: true,
+                grantReason: `Granted by admin ${shortBoostData.a}`,
+                userId: targetUserId,
+                purchaseTime: Date.now()
+            };
             
             // Проверяем что буст для текущего пользователя
             if (targetUserId === currentUserId.toString()) {
