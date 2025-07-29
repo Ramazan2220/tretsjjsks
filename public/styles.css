@@ -1218,65 +1218,83 @@ body {
 
 /* Code Activation Styles */
 .code-activation-section {
-    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
-    border: 2px solid #00ff00;
-    border-radius: 15px;
-    padding: 20px;
+    background: linear-gradient(135deg, rgba(33, 150, 243, 0.05) 0%, rgba(33, 150, 243, 0.1) 100%);
+    border: 1px solid rgba(33, 150, 243, 0.3);
+    border-radius: 16px;
+    padding: 24px 20px;
     margin: 20px;
-    box-shadow: 0 8px 32px rgba(0, 255, 0, 0.1);
+    box-shadow: 0 4px 24px rgba(33, 150, 243, 0.1);
+    backdrop-filter: blur(10px);
 }
 
 .code-activation-section h3 {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 600;
-    color: #00ff00;
+    color: var(--text-primary);
     margin-bottom: 16px;
     letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .code-activation-container {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
 }
 
 .code-input {
     flex: 1;
-    background: #2a2a2a;
-    border: 2px solid #444;
-    border-radius: 10px;
-    padding: 12px 15px;
-    color: white;
+    background: var(--bg-card);
+    border: 2px solid var(--border-light);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--text-primary);
     font-size: 16px;
     font-family: 'Inter', sans-serif;
     text-transform: uppercase;
     letter-spacing: 2px;
     text-align: center;
+    transition: all 0.3s ease;
+}
+
+.code-input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.6;
 }
 
 .code-input:focus {
     outline: none;
-    border-color: #00ff00;
-    box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    background: var(--bg-secondary);
 }
 
 .activate-btn {
-    background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
-    color: black;
+    background: linear-gradient(135deg, var(--accent-blue) 0%, #1976D2 100%);
+    color: white;
     border: none;
-    border-radius: 10px;
-    padding: 12px 20px;
+    border-radius: 12px;
+    padding: 14px 24px;
     font-size: 14px;
-    font-weight: bold;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
     font-family: 'Inter', sans-serif;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
 }
 
 .activate-btn:hover {
-    background: linear-gradient(135deg, #00cc00 0%, #009900 100%);
+    background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0, 255, 0, 0.3);
+    box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+}
+
+.activate-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
 }
 
 .activate-btn:active {
