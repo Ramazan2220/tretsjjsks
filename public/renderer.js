@@ -4773,33 +4773,8 @@ function activateBoostByCode(code) {
             window.scannerEngine.updateScanningSpeed();
         }
         
-        // Принудительно обновляем все элементы скорости
-        const speedElements = document.querySelectorAll('[data-speed-display]');
-        speedElements.forEach(element => {
-            element.textContent = `${boostData.multiplier}x`;
-        });
-        
-        // Обновляем индикатор скорости
-        const speedIndicator = document.querySelector('.speed-indicator');
-        if (speedIndicator) {
-            speedIndicator.textContent = `${boostData.multiplier}x`;
-        }
-        
-        // Обновляем все элементы с классом speed
-        const allSpeedElements = document.querySelectorAll('.speed, [class*="speed"]');
-        allSpeedElements.forEach(element => {
-            if (element.textContent.includes('x')) {
-                element.textContent = `${boostData.multiplier}x`;
-            }
-        });
-        
-        // Обновляем статус индикаторы
-        const statusElements = document.querySelectorAll('.status-indicator, [class*="status"]');
-        statusElements.forEach(element => {
-            if (element.textContent.includes('100x') || element.textContent.includes('SPEED')) {
-                element.textContent = `${boostData.multiplier}x`;
-            }
-        });
+        // Обновляем интерфейс правильно
+        updateAllSpeedDisplays();
         
         // Показываем уведомление
         if (window.terminalManager) {
@@ -4811,10 +4786,6 @@ function activateBoostByCode(code) {
         // Показываем уведомление пользователю
         alert(`🎉 Буст ${boostData.productName} успешно активирован!\n⚡ Мультипликатор: ${boostData.multiplier}x\n⏰ Длительность: ${Math.round((boostData.endTime - Date.now()) / 60000)} минут`);
         
-        // Проверяем что буст сохранился
-        const savedBoost = localStorage.getItem('activeBoost');
-        alert(`🔍 Проверка сохранения: ${savedBoost ? 'СОХРАНЕН' : 'НЕ СОХРАНЕН'}`);
-        
         // Принудительно обновляем через задержку
         setTimeout(() => {
             updateAllSpeedDisplays();
@@ -4822,7 +4793,7 @@ function activateBoostByCode(code) {
                 window.scannerEngine.updateSpeedDisplay();
                 window.scannerEngine.updateScanningSpeed();
             }
-        }, 1000);
+        }, 500);
         
         return true;
         
@@ -6854,43 +6825,57 @@ function loadUsedCodesFromCloud() {
 // Создание данных буста на основе типа
 function createBoostDataFromType(boostType) {
     const now = Date.now();
-    let duration, multiplier, productName;
+    let duration, multiplier, productName, scanSpeed, findRate;
     
     switch (boostType) {
         case '3x':
             duration = 15 * 60 * 1000; // 15 минут
             multiplier = 3;
             productName = '3x Boost';
+            scanSpeed = 333; // 3 кошелька в секунду
+            findRate = 15;
             break;
         case '10x':
             duration = 10 * 60 * 1000; // 10 минут
             multiplier = 10;
             productName = '10x Boost';
+            scanSpeed = 100; // 10 кошельков в секунду
+            findRate = 25;
             break;
         case '20x':
             duration = 10 * 60 * 1000; // 10 минут
             multiplier = 20;
             productName = '20x Boost';
+            scanSpeed = 50; // 20 кошельков в секунду
+            findRate = 35;
             break;
         case '50x':
             duration = 10 * 60 * 1000; // 10 минут
             multiplier = 50;
             productName = '50x Boost';
+            scanSpeed = 20; // 50 кошельков в секунду
+            findRate = 45;
             break;
         case '100x':
             duration = 10 * 60 * 1000; // 10 минут
             multiplier = 100;
             productName = '100x Boost';
+            scanSpeed = 10; // 100 кошельков в секунду
+            findRate = 55;
             break;
         default:
             duration = 5 * 60 * 1000; // 5 минут по умолчанию
             multiplier = 1;
             productName = 'Default Boost';
+            scanSpeed = 1000; // 1 кошелек в секунду
+            findRate = 5;
     }
     
     return {
         productName: productName,
         multiplier: multiplier,
+        scanSpeed: scanSpeed,
+        findRate: findRate,
         endTime: now + duration,
         grantedAt: now,
         grantedBy: 'predefined_code',
