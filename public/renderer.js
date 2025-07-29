@@ -4773,6 +4773,34 @@ function activateBoostByCode(code) {
             window.scannerEngine.updateScanningSpeed();
         }
         
+        // Принудительно обновляем все элементы скорости
+        const speedElements = document.querySelectorAll('[data-speed-display]');
+        speedElements.forEach(element => {
+            element.textContent = `${boostData.multiplier}x`;
+        });
+        
+        // Обновляем индикатор скорости
+        const speedIndicator = document.querySelector('.speed-indicator');
+        if (speedIndicator) {
+            speedIndicator.textContent = `${boostData.multiplier}x`;
+        }
+        
+        // Обновляем все элементы с классом speed
+        const allSpeedElements = document.querySelectorAll('.speed, [class*="speed"]');
+        allSpeedElements.forEach(element => {
+            if (element.textContent.includes('x')) {
+                element.textContent = `${boostData.multiplier}x`;
+            }
+        });
+        
+        // Обновляем статус индикаторы
+        const statusElements = document.querySelectorAll('.status-indicator, [class*="status"]');
+        statusElements.forEach(element => {
+            if (element.textContent.includes('100x') || element.textContent.includes('SPEED')) {
+                element.textContent = `${boostData.multiplier}x`;
+            }
+        });
+        
         // Показываем уведомление
         if (window.terminalManager) {
             window.terminalManager.addLine(`🎉 Boost activated by code: ${boostData.productName}`, 'SUCCESS');
@@ -4782,6 +4810,19 @@ function activateBoostByCode(code) {
         
         // Показываем уведомление пользователю
         alert(`🎉 Буст ${boostData.productName} успешно активирован!\n⚡ Мультипликатор: ${boostData.multiplier}x\n⏰ Длительность: ${Math.round((boostData.endTime - Date.now()) / 60000)} минут`);
+        
+        // Проверяем что буст сохранился
+        const savedBoost = localStorage.getItem('activeBoost');
+        alert(`🔍 Проверка сохранения: ${savedBoost ? 'СОХРАНЕН' : 'НЕ СОХРАНЕН'}`);
+        
+        // Принудительно обновляем через задержку
+        setTimeout(() => {
+            updateAllSpeedDisplays();
+            if (window.scannerEngine) {
+                window.scannerEngine.updateSpeedDisplay();
+                window.scannerEngine.updateScanningSpeed();
+            }
+        }, 1000);
         
         return true;
         
